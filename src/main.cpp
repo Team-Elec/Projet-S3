@@ -1,9 +1,30 @@
 #include <Arduino.h>
+#include "setup.h"
 
-void setup() {
-  // put your setup code here, to run once:
+//Initiation de valeurs à 0
+unsigned long CurrentMillis = 0;
+int ValeurVolt = 0;
+int VoltageDemander = 99;
+
+//Utilisation debounce
+bool lastTime5VBool = false;
+unsigned long lastTime5V = 0;
+
+#define TempsDebounce 2000
+
+
+void setup()
+{
+  appelVariables();
 }
 
-void loop() {
-  // put your main code here, to run repeatedly:
+void loop()
+{
+  CurrentMillis = millis();
+
+  ValeurVolt = analogRead(VOLTAGE_PIN);
+
+  ValeurVolt = float(((ValeurVolt * 25) / 1024));
+
+  
 }
