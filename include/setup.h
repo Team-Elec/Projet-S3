@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include "setup.h"
 #include "variables.h"
+#include "ADS1X15.h"
 
 void appelVariables();
 
