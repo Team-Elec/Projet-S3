@@ -18,13 +18,14 @@ unsigned lastsendtime = 0;
 
 void setup()
 {
+  pinMode(A0, INPUT);
   appelVariables();
 
   ADS.begin();
   ADS.setGain(0);    //Pour avoir +- 6.144 V 
   ADS.setDataRate(7);   //Pour l'avoir vite en tas
   ADS.setMode(0);     //Mode continue
-  ADS.readADC(0);     
+  //ADS.readADC(0);     
 }
 
 void loop()
@@ -32,10 +33,15 @@ void loop()
   CurrentMillis = millis();
 
 //Lecture de la pin A0 du ADS
-  int16_t val_0 = ADS.readADC(0);
-Serial.print("Valeur = ");
-Serial.print(val_0);
-Serial.print("\n");
+  //int16_t val_0 = ADS.readADC(0);
+  int val_0 = analogRead(A0);
+  int16_t val_1 = ADS.readADC(1);
+  Serial.print("Valeur = ");
+  Serial.print(val_0);
+  Serial.print("\t");
+  Serial.print("Valeur = ");
+  Serial.print(val_1);
+  Serial.print("\n");
 
   // Lecture du petit chinois pour la sortie du moteur
   VoltageDemander = lectureChinois();
