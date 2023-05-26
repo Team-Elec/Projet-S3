@@ -8,6 +8,8 @@ void appelVariables()
     Serial.begin(BAUD);
     Serial1.begin(BAUD);
 
-    pinMode(VOLTAGE_PIN, INPUT);
+    pinMode(VOLTAGE_PIN_OUT_1, OUTPUT);
+    pinMode(VOLTAGE_PIN_OUT_2, OUTPUT);
+    pinMode(BIT_TEST, INPUT);
 
 }
