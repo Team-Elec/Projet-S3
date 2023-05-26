@@ -63,7 +63,6 @@ void loop()
   // Envoi du signal
   if (CurrentMillis - lastsendtime > SendTime)
   {
-<<<<<<< HEAD
     if (SerialOrdi)
     {
       Serial.print("Courant : ");
@@ -80,9 +79,6 @@ void loop()
     }
 
     lastsendtime = CurrentMillis;
-=======
-    Voltage = VoltageDemander; 
->>>>>>> ca4f363979b37196bb3a7264d9126cf481c2d0df
   }
 
   // Lecture du petit chinois pour la sortie du moteur
