@@ -30,6 +30,7 @@ unsigned lastsendtime = 0;
 void setup()
 {
   appelVariables();
+  VitessePWM();
 
   ADS.begin();
   ADS.setGain(0);     // Pour avoir +- 6.144 V

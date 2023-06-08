@@ -7,5 +7,6 @@
 #include "ADS1X15.h"
 
 void appelVariables();
+void VitessePWM();
 
 #endif
