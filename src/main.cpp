@@ -14,12 +14,13 @@ bool Bluetooth = false;
 bool SerialOrdi = false;
 int MaximumAjust = 14;
 int MinimumAjust = 10;
+int VoltageDemanderBuck = 8;
 
 // Initiation de valeurs à 0
 // Pas vraiment important tant que ça
 unsigned long CurrentMillis = 0;
 
-float VoltageDemander = 0;
+float VoltageDemanderLum = 0;
 float VoltageDemanderBatt = 0;
 int ModeSepic = 0;
 
@@ -104,13 +105,26 @@ void loop()
     SORTIE_SEPIC = 0;
   }
 
-  VoltageDemander = ((analogRead(Ajust) * (MaximumAjust - MinimumAjust)) / 1023) + MinimumAjust;
+  VoltageDemanderLum = ((analogRead(Ajust) * (MaximumAjust - MinimumAjust)) / 1023) + MinimumAjust;
   VoltageDemanderBatt = VALEUR_BATTERIE;
   VoltageSepic = (SORTIE_SEPIC * 6.144) / 32768;
   CourantBatterie = (COURANT * 6.144) / 32768;
   VoltageBuck = (VAL_BUCK * 6.144) / 32768;
 
   // Mettre ajustement du SEPIC ici
+  if(VoltageDemanderLum < VoltageSepic){
+    PWMSEPIC = PWMSEPIC + 1;
+  }
+  if(VoltageDemanderLum > VoltageSepic){
+    PWMSEPIC = PWMSEPIC - 1;
+  }
+
+   if(VoltageDemanderBuck < VoltageBuck){
+    PWMBUCK = PWMBUCK + 1;
+  }
+  if(VoltageDemanderBuck > VoltageBuck){
+    PWMBUCK = PWMBUCK - 1;
+  }
   // IF VALEUR SEPIC VALEUR DEMANDER +- PWM POUR SE RENDRE
   //Faire pour Buck et pour Sepic
   // Mettre ajustement du SEPIC ici
@@ -118,7 +132,7 @@ void loop()
   // Code pour batterie
   if (ModeLumiere)
   {
-    if (((VoltageDemander - 0.25) < VoltageSepic) && ((VoltageDemander + 0.25) > VoltageSepic))
+    if (((VoltageDemanderLum - 0.25) < VoltageSepic) && ((VoltageDemanderLum + 0.25) > VoltageSepic))
     {
       // Ouverture du MOSFET après le bon nombre de temps
       if (CurrentMillis - lastLumiere > LumiereSecurite)
@@ -127,7 +141,7 @@ void loop()
       }
     }
 
-    if (((VoltageDemander - 0.25) > VoltageSepic) && ((VoltageDemander + 0.25) < VoltageSepic))
+    if (((VoltageDemanderLum - 0.25) > VoltageSepic) && ((VoltageDemanderLum + 0.25) < VoltageSepic))
     {
       // Securité pour la lumière pas qu'elle ouvre ferme rapidement
       lastLumiere = CurrentMillis;
@@ -144,7 +158,6 @@ void loop()
       if (CurrentMillis - lastLumiere > LumiereSecurite)
       {
         digitalWrite(Batterie, HIGH);
-        if()
       }
     }
 
