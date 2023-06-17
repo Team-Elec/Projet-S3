@@ -6,26 +6,46 @@
 // Variables pour le ADS
 ADS1115 ADS(0x48);
 
-float VoltageTest = 0;
-float CourantTest = 0;
-
 // Valeurs importante a changer si jamais
 #define SendTime 1000
-int VoltageMax = 30;
-float ResistanceCharge = 15.4;
+#define LumiereSecurite 2000
+#define BatterieSecurite 2000
 bool Bluetooth = false;
 bool SerialOrdi = false;
+int MaximumAjust = 14;
+int MinimumAjust = 10;
 
 // Initiation de valeurs à 0
 // Pas vraiment important tant que ça
 unsigned long CurrentMillis = 0;
-int VoltageDemander = 0;
-float Voltage = 0;
-float Courant = 0;
-int valPWM = 0;
+
+float VoltageDemander = 0;
+float VoltageDemanderBatt = 0;
+int ModeSepic = 0;
+
+float VoltageSepic = 0;
+float VoltageBuck = 0;
+float CourantBatterie = 0;
+
+int PWMSEPIC = 10;
+int PWMBUCK = 0;
+
+int thermo1 = 0;
+int thermo2 = 0;
+int thermo3 = 0;
+int thermo4 = 0;
+int thermo5 = 0;
+
 // Debounce
 unsigned lastsendtime = 0;
+unsigned lastLumiere = 0;
+unsigned lastBatterie = 0;
 
+// Modes et protections
+bool ModeBatterie = false;
+bool ModeLumiere = false;
+bool ProtectMode = false;
+bool BatterieInitiale = false; 
 
 void setup()
 {
@@ -44,49 +64,116 @@ void loop()
   CurrentMillis = millis();
 
   // Lecture du ADS1115
-  int16_t val_0 = ADS.readADC(0);
-  int16_t val_1 = ADS.readADC(1);
+  int16_t SORTIE_SEPIC = ADS.readADC(0);
+  int16_t VALEUR_BATTERIE = ADS.readADC(1);
+  int16_t COURANT = ADS.readADC(2);
+  int16_t VAL_BUCK = ADS.readADC(3);
 
-  // Calcul du voltage et du courant
+  // Lecture pour le mode du SEPIC
+  ModeSepic = analogRead(Mode);
+  // Protection pour pas qu'il partent dans le mauvais mode
+  if (ModeSepic > 400 && ModeSepic < 600)
+  {
+    ProtectMode = true;
+  }
+  // Doit avoir ProtectMode de true pour être capable d'entrer
+  if (ProtectMode)
+  {
+    // Mode batterie
+    if (ModeSepic < 200)
+    {
+      ModeBatterie = true;
+      ModeLumiere = false;
+    }
+    // Mode off
+    if (ModeSepic > 400 && ModeSepic < 600)
+    {
+      ModeBatterie = false;
+      ModeLumiere = false;
+    }
+    // Mode Lumière
+    if (ModeSepic > 850)
+    {
+      ModeBatterie = false;
+      ModeLumiere = true;
+    }
+  }
 
-  /*
-  METTRE LE CALCUL DE MAXIMUM POUR QUE LE 5V SORTI DISENT LA VRAI SORTIE
-  METTRE LE CALCUL DE MAXIMUM POUR QUE LE 5V SORTI DISENT LA VRAI SORTIE
-  METTRE LE CALCUL DE MAXIMUM POUR QUE LE 5V SORTI DISENT LA VRAI SORTIE
-  */
+  if (SORTIE_SEPIC < 0)
+  {
+    SORTIE_SEPIC = 0;
+  }
 
-  VoltageTest = (analogRead(BIT_TEST) * 5) / 1023;
-  CourantTest = (VoltageTest) / ResistanceCharge;
+  VoltageDemander = ((analogRead(Ajust) * (MaximumAjust - MinimumAjust)) / 1023) + MinimumAjust;
+  VoltageDemanderBatt = VALEUR_BATTERIE;
+  VoltageSepic = (SORTIE_SEPIC * 6.144) / 32768;
+  CourantBatterie = (COURANT * 6.144) / 32768;
+  VoltageBuck = (VAL_BUCK * 6.144) / 32768;
 
-  Voltage = ((val_0 - val_1) * 6.144) / 32768;
-  Courant = Voltage / ResistanceCharge;
+  // Mettre ajustement du SEPIC ici
+  // IF VALEUR SEPIC VALEUR DEMANDER +- PWM POUR SE RENDRE
+  //Faire pour Buck et pour Sepic
+  // Mettre ajustement du SEPIC ici
+
+  // Code pour batterie
+  if (ModeLumiere)
+  {
+    if (((VoltageDemander - 0.25) < VoltageSepic) && ((VoltageDemander + 0.25) > VoltageSepic))
+    {
+      // Ouverture du MOSFET après le bon nombre de temps
+      if (CurrentMillis - lastLumiere > LumiereSecurite)
+      {
+        digitalWrite(Lumiere, HIGH);
+      }
+    }
+
+    if (((VoltageDemander - 0.25) > VoltageSepic) && ((VoltageDemander + 0.25) < VoltageSepic))
+    {
+      // Securité pour la lumière pas qu'elle ouvre ferme rapidement
+      lastLumiere = CurrentMillis;
+      // Fermeture du MOSFET
+      digitalWrite(Lumiere, LOW);
+    }
+  }
+
+  if (ModeBatterie)
+  {
+    if (((VoltageDemanderBatt - 0.25) < VoltageSepic) && ((VoltageDemanderBatt + 0.25) > VoltageSepic))
+    {
+      // Ouverture du MOSFET après le bon nombre de temps
+      if (CurrentMillis - lastLumiere > LumiereSecurite)
+      {
+        digitalWrite(Batterie, HIGH);
+        if()
+      }
+    }
+
+    if (((VoltageDemanderBatt - 0.25) > VoltageSepic) && ((VoltageDemanderBatt + 0.25) < VoltageSepic))
+    {
+      // Securité pour la lumière pas qu'elle ouvre ferme rapidement
+      lastLumiere = CurrentMillis;
+      // Fermeture du MOSFET
+      digitalWrite(Batterie, LOW);
+    }
+  }
 
   // Envoi du signal
   if (CurrentMillis - lastsendtime > SendTime)
   {
     if (SerialOrdi)
     {
-      Serial.print("Courant : ");
+      /*Serial.print("Courant : ");
       Serial.print(Courant);
       Serial.print("\t\tVoltage : ");
-      Serial.println(Voltage);
+      Serial.println(Voltage);*/
     }
     if (Bluetooth)
     {
-      Serial1.print("Courant : ");
+      /*Serial1.print("Courant : ");
       Serial1.print(Courant);
       Serial1.print("\t\tVoltage : ");
-      Serial1.println(Voltage);
+      Serial1.println(Voltage);*/
     }
-
     lastsendtime = CurrentMillis;
   }
-
-  // Lecture du petit chinois pour la sortie du moteur
-  // VoltageDemander = lectureChinois();
-
-  // if (VoltageDemander <= 35)
-  //{
-  //   Voltage = VoltageDemander;
-  // }
 }

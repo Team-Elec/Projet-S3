@@ -5,11 +5,23 @@
 
 #define BAUD 115200
 
-//PIN OÙ LE VOLTAGE RENTRE
-#define VOLTAGE_PIN_OUT_1 52
-#define VOLTAGE_PIN_OUT_2 53
-#define BIT_TEST A0
+// PIN DE THERMO
+#define Therm1 A8
+#define Therm2 A9
+#define Therm3 A10
+#define Therm4 A11
+#define Therm5 A12
 
+#define Mode A1
 
+#define Ajust A0
+
+#define BlueTooth 25
+
+#define Lumiere 30
+#define Batterie 34
+
+#define BUCK 11
+#define SEPIC 9
 
 #endif
