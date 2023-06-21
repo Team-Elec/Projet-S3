@@ -5,24 +5,24 @@
 
 #define BAUD 115200
 
+//Ajustement de la vitesse avec le potentiomètre
+#define AjustVitesse A6
+
 // PIN DE THERMO
-#define Therm1 A8
-#define Therm2 A9
-#define Therm3 A10
-#define Therm4 A11
-#define Therm5 A12
+#define Therm1 A2
+#define Therm3 A4
 
-#define Mode A1
-
-#define Ajust A0
+//Valeur de sortie du moteur dépendament des modes
+#define ValSortieMoteur1 A0
+#define ValSortieMoteur2 A8
 
 #define BlueTooth 25
 
-#define Lumiere 30
-#define Batterie 34
-
-#define BUCK 11
-#define SEPIC 9
+//Pour inversion et controle de moteur toujours mettre inverse 1 avec PWM 1, si non court-circuit
+#define Inverse1 29
+#define Inverse2 33
+#define PWMInverse1 4
+#define PWMInverse2 6
 
 
 #endif

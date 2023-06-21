@@ -5,6 +5,7 @@
 
 
 void setup() {
+  appelVariables();
 }
 
 void loop() {

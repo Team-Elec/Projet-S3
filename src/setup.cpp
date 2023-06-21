@@ -7,21 +7,20 @@ void appelVariables()
     Serial.begin(BAUD);
     Serial1.begin(BAUD);
 
+    pinMode(AjustVitesse, INPUT);
+
     pinMode(Therm1, INPUT);
-    pinMode(Therm2, INPUT);
     pinMode(Therm3, INPUT);
-    pinMode(Therm4, INPUT);
-    pinMode(Therm5, INPUT);
 
-    pinMode(Mode, INPUT);
-    pinMode(Ajust, INPUT);
+    pinMode(ValSortieMoteur1, INPUT);
+    pinMode(ValSortieMoteur2, INPUT);
 
-    pinMode(Batterie, OUTPUT);
-    pinMode(Lumiere, OUTPUT);
     pinMode(BlueTooth, OUTPUT);
+    pinMode(Inverse1, OUTPUT);
+    pinMode(Inverse2, OUTPUT);
 
-    pinMode(SEPIC, OUTPUT);
-    pinMode(BUCK, OUTPUT);
+    pinMode(PWMInverse1, OUTPUT);
+    pinMode(PWMInverse2, OUTPUT);
 }
 
 void VitessePWM()
