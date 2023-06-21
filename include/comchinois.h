@@ -1,0 +1,6 @@
+#ifndef COMCHINOIS_H
+#define COMCHINOIS_H
+
+int lectureChinois();
+
+#endif
