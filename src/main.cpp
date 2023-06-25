@@ -15,12 +15,10 @@ ADS1115 ADS(0x48);
 bool Bluetooth = false;
 bool SerialOrdi = false;
 // Ajustement PID
-float CoeAjustPLum = 0.25;
-float CoeAjustILum = 0.25;
-float CoeAjustPBatt = 0.25;
-float CoeAjustIBatt = 0.25;
-float CoeAjustPBuck = 0.25;
-float CoeAjustIBuck = 0.25;
+float CoeAjustPSepic = 1.9;
+float CoeAjustISepic = 1;
+float CoeAjustPBuck = 6;
+float CoeAjustIBuck = 4;
 // Valeur des ajustement du potentiomètre
 int MaximumAjust = 14;
 int MinimumAjust = 10;
@@ -47,17 +45,23 @@ float ValMoyBuck = 0;
 int NbBuck = 0;
 float MoyennePIDBuck = 0;
 
+float ValMoyOFF = 0;
+int NbOFF = 0;
+float MoyennePIDOFF = 0;
+
 int ValeurAjustementSepicBatt = 0;
 int ValeurAjustementSepicLum = 0;
 int ValeurAjustementBuck = 0;
+int ValeurAjustementSepicOFF = 0;
 int ModeSepic = 0;
 
 float VoltageSepic = 0;
 float VoltageBuck = 0;
+float VoltageOFF = 0;
 float CourantBatterie = 0;
 
-int PWMSEPIC = 100;
-int PWMBUCK = 100;
+int PWMSEPIC = 0;
+int PWMBUCK = 0;
 
 int thermo1 = 0;
 int thermo2 = 0;
@@ -147,7 +151,7 @@ void loop()
     ValMoyLum = ValMoyLum + VoltageSepic;
     MoyennePIDLum = (ValMoyLum) / NbLum;
 
-    ValeurAjustementSepicLum = ((VoltageDemanderLum - VoltageSepic) * CoeAjustPLum) + ((VoltageDemanderLum - MoyennePIDLum) * CoeAjustILum);
+    ValeurAjustementSepicLum = ((VoltageDemanderLum - VoltageSepic) * CoeAjustPSepic) + ((VoltageDemanderLum - MoyennePIDLum) * CoeAjustISepic);
 
     PWMSEPIC = PWMSEPIC + int(ValeurAjustementSepicLum);
     PWMSEPIC = int(PWMSEPIC);
@@ -167,12 +171,34 @@ void loop()
   {
     NbBatt = +1;
     ValMoyBatt = ValMoyBatt + VoltageSepic;
-    MoyennePIDBatt = (ValMoyBatt) / NbBatt;
+    MoyennePIDOFF = (ValMoyOFF) / NbOFF;
 
-    ValeurAjustementSepicBatt = ((VoltageDemanderBatt - VoltageSepic) * CoeAjustPBatt) + ((VoltageDemanderBatt - MoyennePIDBatt) * CoeAjustIBatt);
+    ValeurAjustementSepicOFF = ((VoltageDemanderOFF - VoltageSepic) * CoeAjustPSepic) + ((VoltageDemanderOFF - MoyennePIDOFF) * CoeAjustISepic);
 
-    PWMSEPIC = PWMSEPIC + int(ValeurAjustementSepicBatt);
+    PWMSEPIC = PWMSEPIC + int(ValeurAjustementSepicOFF);
 
+    if (PWMSEPIC < 0)
+    {
+      PWMSEPIC = 0;
+    }
+    if (PWMSEPIC > 255)
+    {
+      PWMSEPIC = 255;
+    }
+    analogWrite(SEPIC, PWMSEPIC);
+  }
+
+//OFF
+  if (ModeLumiere == false && ModeBatterie == false)
+  {
+    NbOFF = +1;
+    ValMoyOFF = ValMoyOFF + VoltageSepic;
+    MoyennePIDLum = (ValMoyLum) / NbLum;
+
+    ValeurAjustementSepicLum = ((VoltageDemanderLum - VoltageSepic) * CoeAjustPSepic) + ((VoltageDemanderLum - MoyennePIDLum) * CoeAjustISepic);
+
+    PWMSEPIC = PWMSEPIC + int(ValeurAjustementSepicLum);
+    PWMSEPIC = int(PWMSEPIC);
     if (PWMSEPIC < 0)
     {
       PWMSEPIC = 0;
