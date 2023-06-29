@@ -23,7 +23,7 @@ float CoeAjustIBuck = 4;
 int MaximumAjust = 14;
 int MinimumAjust = 10;
 // Voltage de BUCK
-int VoltageDemanderBuck = 8;
+float VoltageDemanderBuck = 8.3;
 int VoltageDemanderOFF = 10;
 
 // Initiation de valeurs à 0
@@ -104,8 +104,9 @@ void loop()
 
   // Lecture pour le mode du SEPIC
   ModeSepic = analogRead(Mode);
+ 
   // Protection pour pas qu'il partent dans le mauvais mode
-  if (ModeSepic > 400 && ModeSepic < 600)
+  if (ModeSepic > 200 && ModeSepic < 850)
   {
     ProtectMode = true;
   }
@@ -119,7 +120,7 @@ void loop()
       ModeLumiere = false;
     }
     // Mode off
-    if (ModeSepic > 400 && ModeSepic < 600)
+    if (ModeSepic > 250 && ModeSepic < 800)
     {
       ModeBatterie = false;
       ModeLumiere = false;
@@ -188,16 +189,16 @@ void loop()
     analogWrite(SEPIC, PWMSEPIC);
   }
 
-//OFF
+  // OFF
   if (ModeLumiere == false && ModeBatterie == false)
   {
     NbOFF = +1;
     ValMoyOFF = ValMoyOFF + VoltageSepic;
     MoyennePIDLum = (ValMoyLum) / NbLum;
 
-    ValeurAjustementSepicLum = ((VoltageDemanderLum - VoltageSepic) * CoeAjustPSepic) + ((VoltageDemanderLum - MoyennePIDLum) * CoeAjustISepic);
+    ValeurAjustementSepicOFF = ((VoltageDemanderOFF - VoltageSepic) * CoeAjustPSepic) + ((VoltageDemanderOFF - MoyennePIDLum) * CoeAjustISepic);
 
-    PWMSEPIC = PWMSEPIC + int(ValeurAjustementSepicLum);
+    PWMSEPIC = PWMSEPIC + int(ValeurAjustementSepicOFF);
     PWMSEPIC = int(PWMSEPIC);
     if (PWMSEPIC < 0)
     {
@@ -270,23 +271,25 @@ void loop()
     }
   }
 
-  // Envoi du signal
-  if (CurrentMillis - lastsendtime > SendTime)
-  {
-    if (SerialOrdi)
+  if
+
+    // Envoi du signal
+    if (CurrentMillis - lastsendtime > SendTime)
     {
-      /*Serial.print("Courant : ");
-      Serial.print(Courant);
-      Serial.print("\t\tVoltage : ");
-      Serial.println(Voltage);*/
+      if (SerialOrdi)
+      {
+        /*Serial.print("Courant : ");
+        Serial.print(Courant);
+        Serial.print("\t\tVoltage : ");
+        Serial.println(Voltage);*/
+      }
+      if (Bluetooth)
+      {
+        /*Serial1.print("Courant : ");
+        Serial1.print(Courant);
+        Serial1.print("\t\tVoltage : ");
+        Serial1.println(Voltage);*/
+      }
+      lastsendtime = CurrentMillis;
     }
-    if (Bluetooth)
-    {
-      /*Serial1.print("Courant : ");
-      Serial1.print(Courant);
-      Serial1.print("\t\tVoltage : ");
-      Serial1.println(Voltage);*/
-    }
-    lastsendtime = CurrentMillis;
-  }
 }
