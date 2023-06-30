@@ -11,9 +11,11 @@ ADS1115 ADS(0x48);
 #define SendTime 1000
 #define LumiereSecurite 2000
 #define BatterieSecurite 2000
+
 // Lieu des sortie Serial
 bool Bluetooth = false;
 bool SerialOrdi = false;
+
 // Ajustement PID
 float CoeAjustPSepic = 1.9;
 float CoeAjustISepic = 1;
@@ -21,12 +23,17 @@ float CoeAjustPBuck = 6;
 float CoeAjustIBuck = 4;
 float CoeAjustPBatterie = 6;
 float CoeAjustIBatterie = 4;
+
 // Valeur des ajustement du potentiomètre
 int MaximumAjust = 14;
 int MinimumAjust = 10;
+
 // Voltage de BUCK
 float VoltageDemanderBuck = 8.3;
+
+// Voltage SEPIC
 int VoltageDemanderOFF = 10;
+
 // Courant dans la batterie (en Volt)
 float CourantDansLaBatterie = 2.5;
 
@@ -74,6 +81,13 @@ void loop()
   int16_t COURANT = ADS.readADC(2);
   int16_t VAL_BUCK = ADS.readADC(3);
 
+  // Transfert vers les vrai valeurs
+  VoltageDemanderLum = ((analogRead(Ajust) * (MaximumAjust - MinimumAjust)) / 1023) + MinimumAjust;
+  VoltageDemanderBattVide = VALEUR_BATTERIE;
+  VoltageSepic = (SORTIE_SEPIC * 6.144) / 32768;
+  CourantBatterie = (COURANT * 6.144) / 32768;
+  VoltageBuck = (VAL_BUCK * 6.144) / 32768;
+
   // Lecture pour le mode du SEPIC
   ModeSepic = analogRead(Mode);
 
@@ -83,6 +97,7 @@ void loop()
     ProtectMode = true;
   }
   // Doit avoir ProtectMode de true pour être capable d'entrer
+  // Mode : <200 = batterie, <850 = lumière, <800 et >250 Mode off
   if (ProtectMode)
   {
     // Mode batterie
@@ -105,19 +120,8 @@ void loop()
     }
   }
 
-  if (SORTIE_SEPIC < 0)
-  {
-    SORTIE_SEPIC = 0;
-  }
-
-  // Lecture de plusieurs valeurs
-  VoltageDemanderLum = ((analogRead(Ajust) * (MaximumAjust - MinimumAjust)) / 1023) + MinimumAjust;
-  VoltageDemanderBattVide = VALEUR_BATTERIE;
-  VoltageSepic = (SORTIE_SEPIC * 6.144) / 32768;
-  CourantBatterie = (COURANT * 6.144) / 32768;
-  VoltageBuck = (VAL_BUCK * 6.144) / 32768;
-
-  // PID de l'ajustement
+  // Ajustement des convertisseur
+  //  PID de l'ajustement
   if (ModeLumiere)
   {
     NbLum = +1;
@@ -139,7 +143,6 @@ void loop()
     analogWrite(SEPIC, PWMSEPIC);
   }
 
-  // Code pour le Sepic en Batterie
   if (ModeBatterie)
   {
     NbBatt = +1;
@@ -161,7 +164,6 @@ void loop()
     analogWrite(SEPIC, PWMSEPIC);
   }
 
-  // OFF
   if (ModeLumiere == false && ModeBatterie == false)
   {
     BatterieOuverte = false;
@@ -170,9 +172,9 @@ void loop()
     digitalWrite(OFF, HIGH);
     NbOFF = +1;
     ValMoyOFF = ValMoyOFF + VoltageSepic;
-    MoyennePIDLum = (ValMoyLum) / NbLum;
+    MoyennePIDOFF = (ValMoyOFF) / NbOFF;
 
-    ValeurAjustementSepicOFF = ((VoltageDemanderOFF - VoltageSepic) * CoeAjustPSepic) + ((VoltageDemanderOFF - MoyennePIDLum) * CoeAjustISepic);
+    ValeurAjustementSepicOFF = ((VoltageDemanderOFF - VoltageSepic) * CoeAjustPSepic) + ((VoltageDemanderOFF - MoyennePIDOFF) * CoeAjustISepic);
 
     PWMSEPIC = PWMSEPIC + int(ValeurAjustementSepicOFF);
     PWMSEPIC = int(PWMSEPIC);
@@ -206,7 +208,8 @@ void loop()
   }
   analogWrite(BUCK, PWMBUCK);
 
-  // Code pour la Lumiere Activation
+  // POSSIBILITÉ DE PROBLÈME A VÉRIFIER
+  //  Code pour la Lumiere Activation
   if (ModeLumiere)
   {
     if (((VoltageDemanderLum - 0.25) < VoltageSepic) && ((VoltageDemanderLum + 0.25) > VoltageSepic))
@@ -235,6 +238,13 @@ void loop()
     if (BatterieOuverte == false)
     {
       VoltageDemanderBatt = VoltageDemanderBattVide;
+      if ((VoltageDemanderBatt < VoltageSepic) && ((VoltageDemanderBatt + 0.25) > VoltageSepic))
+      {
+        BatterieOuverte = true;
+        digitalWrite(OFF, LOW);
+        digitalWrite(Lumiere, LOW);
+        digitalWrite(Batterie, HIGH);
+      }
     }
     if (BatterieOuverte == true)
     {
@@ -253,19 +263,17 @@ void loop()
       if (CurrentMillis - lastBatterie > BatterieSecurite)
       {
         BatterieOuverte = true;
-        digitalWrite(OFF, LOW);
-        digitalWrite(Lumiere, LOW);
-        digitalWrite(Batterie, HIGH);
       }
     }
 
-    if (CourantBatterie >= 4 || CourantBatterie <= 0.2)
+    if (CourantBatterie >= 4)
     {
       BatterieOuverte = false;
-      // Securité pour la lumière pas qu'elle ouvre ferme rapidement
-      lastBatterie = CurrentMillis;
       // Fermeture du MOSFET
       digitalWrite(Batterie, LOW);
+
+      // Securité pour la lumière pas qu'elle ouvre ferme rapidement
+      lastBatterie = CurrentMillis;
     }
   }
 
@@ -287,5 +295,10 @@ void loop()
       Serial1.println(Voltage);*/
     }
     lastsendtime = CurrentMillis;
+  }
+
+  if (SORTIE_SEPIC < 0)
+  {
+    SORTIE_SEPIC = 0;
   }
 }
