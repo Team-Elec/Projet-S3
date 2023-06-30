@@ -19,66 +19,38 @@ float CoeAjustPSepic = 1.9;
 float CoeAjustISepic = 1;
 float CoeAjustPBuck = 6;
 float CoeAjustIBuck = 4;
+float CoeAjustPBatterie = 6;
+float CoeAjustIBatterie = 4;
 // Valeur des ajustement du potentiomètre
 int MaximumAjust = 14;
 int MinimumAjust = 10;
 // Voltage de BUCK
 float VoltageDemanderBuck = 8.3;
 int VoltageDemanderOFF = 10;
+// Courant dans la batterie (en Volt)
+float CourantDansLaBatterie = 2.5;
 
 // Initiation de valeurs à 0
 // Pas vraiment important tant que ça
 unsigned long CurrentMillis = 0;
 
-float VoltageDemanderLum = 0;
-float VoltageDemanderBatt = 0;
-
-float ValMoyLum = 0;
-int NbLum = 0;
-float MoyennePIDLum = 0;
-
-float ValMoyBatt = 0;
-int NbBatt = 0;
-float MoyennePIDBatt = 0;
-
-float ValMoyBuck = 0;
-int NbBuck = 0;
-float MoyennePIDBuck = 0;
-
-float ValMoyOFF = 0;
-int NbOFF = 0;
-float MoyennePIDOFF = 0;
-
-int ValeurAjustementSepicBatt = 0;
-int ValeurAjustementSepicLum = 0;
-int ValeurAjustementBuck = 0;
-int ValeurAjustementSepicOFF = 0;
-int ModeSepic = 0;
-
-float VoltageSepic = 0;
-float VoltageBuck = 0;
-float VoltageOFF = 0;
-float CourantBatterie = 0;
-
-int PWMSEPIC = 0;
-int PWMBUCK = 0;
-
-int thermo1 = 0;
-int thermo2 = 0;
-int thermo3 = 0;
-int thermo4 = 0;
-int thermo5 = 0;
+float VoltageDemanderLum, VoltageDemanderBattVide, VoltageDemanderBatt = 0;
+float ValMoyLum, ValMoyBatt, MoyennePIDBatt, ValMoyBattOn, MoyennePIDBattOn, ValMoyBuck, MoyennePIDBuck, ValMoyOFF, MoyennePIDOFF, MoyennePIDLum = 0;
+int NbLum, NbBatt, NbBattOn, NbBuck, NbOFF = 0;
+int ValeurAjustementSepicBatt, ValeurAjustementSepicBattOn, ValeurAjustementSepicLum, ValeurAjustementBuck, ValeurAjustementSepicOFF, ModeSepic = 0;
+float VoltageSepic, VoltageBuck, VoltageOFF, CourantBatterie = 0;
+int PWMSEPIC, PWMBUCK = 0;
+int thermo1, thermo2, thermo3, thermo4, thermo5 = 0;
 
 // Debounce
-unsigned lastsendtime = 0;
-unsigned lastLumiere = 0;
-unsigned lastBatterie = 0;
+unsigned lastsendtime, lastLumiere, lastBatterie = 0;
 
 // Modes et protections
 bool ModeBatterie = false;
 bool ModeLumiere = false;
 bool ProtectMode = false;
 bool BatterieInitiale = false;
+bool BatterieOuverte = false;
 
 void setup()
 {
@@ -104,7 +76,7 @@ void loop()
 
   // Lecture pour le mode du SEPIC
   ModeSepic = analogRead(Mode);
- 
+
   // Protection pour pas qu'il partent dans le mauvais mode
   if (ModeSepic > 200 && ModeSepic < 850)
   {
@@ -140,7 +112,7 @@ void loop()
 
   // Lecture de plusieurs valeurs
   VoltageDemanderLum = ((analogRead(Ajust) * (MaximumAjust - MinimumAjust)) / 1023) + MinimumAjust;
-  VoltageDemanderBatt = VALEUR_BATTERIE;
+  VoltageDemanderBattVide = VALEUR_BATTERIE;
   VoltageSepic = (SORTIE_SEPIC * 6.144) / 32768;
   CourantBatterie = (COURANT * 6.144) / 32768;
   VoltageBuck = (VAL_BUCK * 6.144) / 32768;
@@ -148,9 +120,6 @@ void loop()
   // PID de l'ajustement
   if (ModeLumiere)
   {
-    digitalWrite(OFF, LOW);
-    digitalWrite(Batterie, LOW);
-    digitalWrite(Lumiere, HIGH);
     NbLum = +1;
     ValMoyLum = ValMoyLum + VoltageSepic;
     MoyennePIDLum = (ValMoyLum) / NbLum;
@@ -173,16 +142,13 @@ void loop()
   // Code pour le Sepic en Batterie
   if (ModeBatterie)
   {
-    digitalWrite(OFF, LOW);
-    digitalWrite(Lumiere, LOW);
-    digitalWrite(Batterie, HIGH);
     NbBatt = +1;
     ValMoyBatt = ValMoyBatt + VoltageSepic;
-    MoyennePIDOFF = (ValMoyOFF) / NbOFF;
+    MoyennePIDBatt = (ValMoyBatt) / NbBatt;
 
-    ValeurAjustementSepicOFF = ((VoltageDemanderOFF - VoltageSepic) * CoeAjustPSepic) + ((VoltageDemanderOFF - MoyennePIDOFF) * CoeAjustISepic);
+    ValeurAjustementSepicBatt = ((VoltageDemanderBatt - VoltageSepic) * CoeAjustPSepic) + ((VoltageDemanderBatt - MoyennePIDBatt) * CoeAjustISepic);
 
-    PWMSEPIC = PWMSEPIC + int(ValeurAjustementSepicOFF);
+    PWMSEPIC = PWMSEPIC + int(ValeurAjustementSepicBatt);
 
     if (PWMSEPIC < 0)
     {
@@ -198,6 +164,9 @@ void loop()
   // OFF
   if (ModeLumiere == false && ModeBatterie == false)
   {
+    BatterieOuverte = false;
+    digitalWrite(Lumiere, LOW);
+    digitalWrite(Batterie, LOW);
     digitalWrite(OFF, HIGH);
     NbOFF = +1;
     ValMoyOFF = ValMoyOFF + VoltageSepic;
@@ -245,6 +214,8 @@ void loop()
       // Ouverture du MOSFET après le bon nombre de temps
       if (CurrentMillis - lastLumiere > LumiereSecurite)
       {
+        digitalWrite(OFF, LOW);
+        digitalWrite(Batterie, LOW);
         digitalWrite(Lumiere, HIGH);
       }
     }
@@ -257,46 +228,64 @@ void loop()
       digitalWrite(Lumiere, LOW);
     }
   }
+
   // Code pour la Batterie Activation
   if (ModeBatterie)
   {
-    if (((VoltageDemanderBatt - 0.25) < VoltageSepic) && ((VoltageDemanderBatt + 0.25) > VoltageSepic))
+    if (BatterieOuverte == false)
+    {
+      VoltageDemanderBatt = VoltageDemanderBattVide;
+    }
+    if (BatterieOuverte == true)
+    {
+      NbBattOn = +1;
+      ValMoyBattOn = ValMoyBattOn + CourantBatterie;
+      MoyennePIDBattOn = (ValMoyBattOn) / NbBattOn;
+
+      ValeurAjustementSepicBattOn = ((CourantDansLaBatterie - CourantBatterie) * CoeAjustPBatterie) + ((CourantDansLaBatterie - MoyennePIDBattOn) * CoeAjustIBatterie);
+
+      VoltageDemanderBatt = VoltageDemanderBattVide + ValeurAjustementSepicBattOn;
+    }
+
+    if (CourantBatterie < 4)
     {
       // Ouverture du MOSFET après le bon nombre de temps
-      if (CurrentMillis - lastLumiere > LumiereSecurite)
+      if (CurrentMillis - lastBatterie > BatterieSecurite)
       {
+        BatterieOuverte = true;
+        digitalWrite(OFF, LOW);
+        digitalWrite(Lumiere, LOW);
         digitalWrite(Batterie, HIGH);
       }
     }
 
-    if (((VoltageDemanderBatt - 0.25) > VoltageSepic) && ((VoltageDemanderBatt + 0.25) < VoltageSepic))
+    if (CourantBatterie >= 4 || CourantBatterie <= 0.2)
     {
+      BatterieOuverte = false;
       // Securité pour la lumière pas qu'elle ouvre ferme rapidement
-      lastLumiere = CurrentMillis;
+      lastBatterie = CurrentMillis;
       // Fermeture du MOSFET
       digitalWrite(Batterie, LOW);
     }
   }
 
-  if
-
-    // Envoi du signal
-    if (CurrentMillis - lastsendtime > SendTime)
+  // Envoi du signal
+  if (CurrentMillis - lastsendtime > SendTime)
+  {
+    if (SerialOrdi)
     {
-      if (SerialOrdi)
-      {
-        /*Serial.print("Courant : ");
-        Serial.print(Courant);
-        Serial.print("\t\tVoltage : ");
-        Serial.println(Voltage);*/
-      }
-      if (Bluetooth)
-      {
-        /*Serial1.print("Courant : ");
-        Serial1.print(Courant);
-        Serial1.print("\t\tVoltage : ");
-        Serial1.println(Voltage);*/
-      }
-      lastsendtime = CurrentMillis;
+      /*Serial.print("Courant : ");
+      Serial.print(Courant);
+      Serial.print("\t\tVoltage : ");
+      Serial.println(Voltage);*/
     }
+    if (Bluetooth)
+    {
+      /*Serial1.print("Courant : ");
+      Serial1.print(Courant);
+      Serial1.print("\t\tVoltage : ");
+      Serial1.println(Voltage);*/
+    }
+    lastsendtime = CurrentMillis;
+  }
 }
