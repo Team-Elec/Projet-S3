@@ -23,6 +23,8 @@ void appelVariables()
 
     pinMode(SEPIC, OUTPUT);
     pinMode(BUCK, OUTPUT);
+
+    pinMode(OFF, OUTPUT);
 }
 
 void VitessePWM()

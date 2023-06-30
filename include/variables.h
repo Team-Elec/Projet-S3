@@ -20,9 +20,11 @@
 
 #define Lumiere 30
 #define Batterie 34
+#define OFF 26
 
 #define BUCK 11
 #define SEPIC 9
+
 
 
 #endif

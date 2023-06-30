@@ -148,6 +148,9 @@ void loop()
   // PID de l'ajustement
   if (ModeLumiere)
   {
+    digitalWrite(OFF, LOW);
+    digitalWrite(Batterie, LOW);
+    digitalWrite(Lumiere, HIGH);
     NbLum = +1;
     ValMoyLum = ValMoyLum + VoltageSepic;
     MoyennePIDLum = (ValMoyLum) / NbLum;
@@ -170,6 +173,9 @@ void loop()
   // Code pour le Sepic en Batterie
   if (ModeBatterie)
   {
+    digitalWrite(OFF, LOW);
+    digitalWrite(Lumiere, LOW);
+    digitalWrite(Batterie, HIGH);
     NbBatt = +1;
     ValMoyBatt = ValMoyBatt + VoltageSepic;
     MoyennePIDOFF = (ValMoyOFF) / NbOFF;
@@ -192,6 +198,7 @@ void loop()
   // OFF
   if (ModeLumiere == false && ModeBatterie == false)
   {
+    digitalWrite(OFF, HIGH);
     NbOFF = +1;
     ValMoyOFF = ValMoyOFF + VoltageSepic;
     MoyennePIDLum = (ValMoyLum) / NbLum;
