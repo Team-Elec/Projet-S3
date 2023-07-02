@@ -131,7 +131,7 @@ void loop()
     ValeurAjustementSepicLum = ((VoltageDemanderLum - VoltageSepic) * CoeAjustPSepic) + ((VoltageDemanderLum - MoyennePIDLum) * CoeAjustISepic);
 
     PWMSEPIC = PWMSEPIC + int(ValeurAjustementSepicLum);
-    PWMSEPIC = int(PWMSEPIC);
+    PWMSEPIC = int(ceil(PWMSEPIC));
     if (PWMSEPIC < 0)
     {
       PWMSEPIC = 0;
@@ -152,6 +152,7 @@ void loop()
     ValeurAjustementSepicBatt = ((VoltageDemanderBatt - VoltageSepic) * CoeAjustPSepic) + ((VoltageDemanderBatt - MoyennePIDBatt) * CoeAjustISepic);
 
     PWMSEPIC = PWMSEPIC + int(ValeurAjustementSepicBatt);
+    PWMSEPIC = int(ceil(PWMSEPIC));
 
     if (PWMSEPIC < 0)
     {
