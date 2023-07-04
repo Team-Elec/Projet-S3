@@ -12,9 +12,6 @@ ADS1115 ADS(0x48);
 #define SendTime 1000
 #define LumiereSecurite 2000
 #define BatterieSecurite 2000
-// En microseconde
-#define TempsSEPIC 127
-#define TempsBUCK 32
 
 // Lieu des sortie Serial
 bool Bluetooth = false;
@@ -41,22 +38,27 @@ int VoltageDemanderOFF = 10;
 // Courant dans la batterie (en Volt)
 float CourantDansLaBatterie = 2.5;
 
+// Maximum de variation avant la fermeture (Valeur + chiffre et Valeur - chiffre)
+float MaxVariation = 0.5;
+
 // Initiation de valeurs à 0
 // Pas vraiment important tant que ça
 unsigned long CurrentMillis = 0;
 unsigned long CurrentMicros = 0;
 
 float VoltageDemanderLum, VoltageDemanderBattVide, VoltageDemanderBatt = 0;
-float ValMoyLum, ValMoyBatt, MoyennePIDBatt, ValMoyBattOn, MoyennePIDBattOn, ValMoyBuck, MoyennePIDBuck, ValMoyOFF, MoyennePIDOFF, MoyennePIDLum = 0;
-float ValeurAjustementSepicBatt, ValeurAjustementSepicBattOn, ValeurAjustementSepicLum, ValeurAjustementBuck, ValeurAjustementSepicOFF, ModeSepic = 0;
+float IPIDBatt, IPIDBattOn, IPIDBuck, IPIDOFF, IPIDLum = 0;
+float ValeurAjustementSepicBatt, ValeurAjustementSepicBattOn, ValeurAjustementSepicLum, ValeurAjustementBuck, ValeurAjustementSepicOFF = 0;
+float ModeSepic = 0;
 float VoltageSepic, VoltageBuck, VoltageOFF, CourantBatterie = 0;
 float PWMSEPIC, PWMBUCK = 0;
 int PWMSEPICINT, PWMBUCKINT = 0;
 int thermo1, thermo2, thermo3, thermo4, thermo5 = 0;
-float LastValTempsLum, LastValVoltLum, LastValTempsBuck, LastValVoltBuck, LastValTempsBatt, LastValVoltBatt, LastValTempsBattOn, LastValVoltBattOn, LastValTempsOFF, LastValVoltOFF = 0;
+float LastValTempsLum, LastValTempsBuck, LastValTempsBatt, LastValTempsBattOn, LastValTempsOFF = 0;
+float ErreurLum, ErreurBuck, ErreurBatt, ErreurBattOn, ErreurOFF = 0;
 
 // Debounce
-unsigned lastsendtime, lastLumiere, lastBatterie, lastSEPIC, lastBUCK = 0;
+unsigned lastsendtime, lastLumiere, lastBatterie = 0;
 
 // Modes et protections
 bool ModeBatterie = false;
@@ -135,11 +137,12 @@ void loop()
     // Petit code pour debogguer YOUPIIII
     printage(Bluetooth, SerialOrdi, 1);
 
-    MoyennePIDLum = (CurrentMicros - LastValTempsLum) / (VoltageSepic - LastValVoltLum);
-    LastValTempsLum = CurrentMicros;
-    LastValVoltLum = VoltageSepic;
+    ErreurLum = VoltageDemanderLum - VoltageSepic;
 
-    ValeurAjustementSepicLum = ((VoltageDemanderLum - VoltageSepic) * CoeAjustPSepic) + ((MoyennePIDLum)*CoeAjustISepic);
+    IPIDLum += (CurrentMicros - LastValTempsLum) * ErreurLum;
+    LastValTempsLum = CurrentMicros;
+
+    ValeurAjustementSepicLum = (ErreurLum * CoeAjustPSepic) + (IPIDLum * CoeAjustISepic);
     PWMSEPIC = PWMSEPIC + ValeurAjustementSepicLum;
     PWMSEPICINT = int(PWMSEPIC);
 
@@ -151,221 +154,215 @@ void loop()
     {
       PWMSEPICINT = 255;
     }
-    lastSEPIC = CurrentMicros;
     analogWrite(SEPIC, PWMSEPICINT);
   }
+
   if (ModeBatterie)
   {
     // Petit code pour debogguer YOUPIIII
     printage(Bluetooth, SerialOrdi, 2);
 
-    if (CurrentMicros - lastSEPIC > TempsSEPIC)
+    ErreurBatt = VoltageDemanderBatt - VoltageSepic;
+
+    IPIDBatt += (CurrentMicros - LastValTempsBatt) * ErreurBatt;
+    LastValTempsBatt = CurrentMicros;
+
+    ValeurAjustementSepicBatt = (ErreurBatt * CoeAjustPSepic) + (IPIDBatt * CoeAjustISepic);
+    PWMSEPIC = PWMSEPIC + int(ValeurAjustementSepicBatt);
+    PWMSEPICINT = int(PWMSEPIC);
+
+    if (PWMSEPICINT < 0)
     {
-
-      MoyennePIDBatt = (CurrentMicros - LastValTempsBatt) / (VoltageSepic - LastValVoltBatt);
-      LastValTempsBatt = CurrentMicros;
-      LastValVoltBatt = VoltageSepic;
-
-      ValeurAjustementSepicBatt = ((VoltageDemanderBatt - VoltageSepic) * CoeAjustPSepic) + ((MoyennePIDBatt)*CoeAjustISepic);
-      PWMSEPIC = PWMSEPIC + int(ValeurAjustementSepicBatt);
-      PWMSEPICINT = int(PWMSEPIC);
-
-      if (PWMSEPICINT < 0)
-      {
-        PWMSEPICINT = 0;
-      }
-      if (PWMSEPICINT > 255)
-      {
-        PWMSEPICINT = 255;
-      }
-      lastSEPIC = CurrentMicros;
-      analogWrite(SEPIC, PWMSEPICINT);
+      PWMSEPICINT = 0;
     }
-    if (!ModeLumiere && !ModeBatterie)
+    if (PWMSEPICINT > 255)
+    {
+      PWMSEPICINT = 255;
+    }
+    analogWrite(SEPIC, PWMSEPICINT);
+  }
+
+  if (!ModeLumiere && !ModeBatterie)
+  {
+    // Petit code pour debogguer YOUPIIII
+    printage(Bluetooth, SerialOrdi, 3);
+
+    // Petit code pour debogguer YOUPIIII
+    printage(Bluetooth, SerialOrdi, 4);
+
+    ErreurOFF = VoltageDemanderOFF - VoltageSepic;
+    IPIDOFF += (CurrentMicros - LastValTempsOFF) * ErreurOFF;
+    LastValTempsOFF = CurrentMicros;
+
+    ValeurAjustementSepicOFF = (ErreurOFF * CoeAjustPSepic) + (IPIDOFF * CoeAjustISepic);
+    PWMSEPIC = PWMSEPIC + ValeurAjustementSepicOFF;
+    PWMSEPICINT = int(PWMSEPIC);
+
+    if (PWMSEPICINT < 0)
+    {
+      PWMSEPICINT = 0;
+    }
+    if (PWMSEPICINT > 255)
+    {
+      PWMSEPICINT = 255;
+    }
+
+    analogWrite(SEPIC, PWMSEPICINT);
+  }
+
+  // Code de Buck
+
+  // Petit code pour debogguer YOUPIIII
+  printage(Bluetooth, SerialOrdi, 5);
+
+  ErreurBuck = VoltageDemanderBuck - VoltageSepic;
+
+  IPIDBuck += (CurrentMicros - LastValTempsBuck) * ErreurBuck;
+  LastValTempsBuck = CurrentMicros;
+
+  ValeurAjustementBuck = (ErreurBuck * CoeAjustPBuck) + (IPIDBuck * CoeAjustIBuck);
+
+  PWMBUCK = PWMBUCK + ValeurAjustementBuck;
+  PWMBUCKINT = int(PWMBUCK);
+  if (PWMBUCKINT < 0)
+  {
+    PWMBUCKINT = 0;
+  }
+  if (PWMBUCKINT > 255)
+  {
+    PWMBUCKINT = 255;
+  }
+
+  analogWrite(BUCK, PWMBUCKINT);
+
+  // POSSIBILITÉ DE PROBLÈME A VÉRIFIER
+  //  Code pour la Lumiere Activation
+  if (ModeLumiere)
+  {
+    if (((VoltageDemanderLum - MaxVariation) < VoltageSepic) && ((VoltageDemanderLum + MaxVariation) > VoltageSepic))
     {
       // Petit code pour debogguer YOUPIIII
-      printage(Bluetooth, SerialOrdi, 3);
+      printage(Bluetooth, SerialOrdi, 6);
 
-      BatterieOuverte = false;
-
-      digitalWrite(Lumiere, LOW);
-      digitalWrite(Batterie, LOW);
-      digitalWrite(OFF, HIGH);
-
-      if (CurrentMicros - lastSEPIC > TempsSEPIC)
+      // Ouverture du MOSFET après le bon nombre de temps
+      if (CurrentMillis - lastLumiere > LumiereSecurite)
       {
         // Petit code pour debogguer YOUPIIII
-        printage(Bluetooth, SerialOrdi, 4);
+        printage(Bluetooth, SerialOrdi, 7);
 
-        MoyennePIDOFF = (CurrentMicros - LastValTempsOFF) / (VoltageSepic - LastValVoltOFF);
-        LastValTempsOFF = CurrentMicros;
-        LastValVoltOFF = VoltageSepic;
-
-        ValeurAjustementSepicOFF = ((VoltageDemanderOFF - VoltageSepic) * CoeAjustPSepic) + ((MoyennePIDOFF)*CoeAjustISepic);
-        PWMSEPIC = PWMSEPIC + ValeurAjustementSepicOFF;
-        PWMSEPICINT = int(PWMSEPIC);
-
-        if (PWMSEPICINT < 0)
-        {
-          PWMSEPICINT = 0;
-        }
-        if (PWMSEPICINT > 255)
-        {
-          PWMSEPICINT = 255;
-        }
-        lastSEPIC = CurrentMicros;
-      }
-      analogWrite(SEPIC, PWMSEPICINT);
-    }
-
-    // Code de Buck
-    if (CurrentMicros - lastBUCK > TempsBUCK)
-    {
-      // Petit code pour debogguer YOUPIIII
-      printage(Bluetooth, SerialOrdi, 5);
-
-      MoyennePIDBuck = (CurrentMicros - LastValTempsBuck) / (VoltageSepic - LastValVoltBuck);
-      LastValTempsBuck = CurrentMicros;
-      LastValVoltBuck = VoltageSepic;
-
-      ValeurAjustementBuck = ((VoltageDemanderBuck - VoltageBuck) * CoeAjustPBuck) + ((MoyennePIDBuck)*CoeAjustIBuck);
-
-      PWMBUCK = PWMBUCK + ValeurAjustementBuck;
-      PWMBUCKINT = int(PWMBUCK);
-      if (PWMBUCKINT < 0)
-      {
-        PWMBUCKINT = 0;
-      }
-      if (PWMBUCKINT > 255)
-      {
-        PWMBUCKINT = 255;
-      }
-      lastBUCK = CurrentMicros;
-    }
-    analogWrite(BUCK, PWMBUCKINT);
-
-    // POSSIBILITÉ DE PROBLÈME A VÉRIFIER
-    //  Code pour la Lumiere Activation
-    if (ModeLumiere)
-    {
-      if (((VoltageDemanderLum - 0.25) < VoltageSepic) && ((VoltageDemanderLum + 0.25) > VoltageSepic))
-      {
-        // Petit code pour debogguer YOUPIIII
-        printage(Bluetooth, SerialOrdi, 6);
-
-        // Ouverture du MOSFET après le bon nombre de temps
-        if (CurrentMillis - lastLumiere > LumiereSecurite)
-        {
-          // Petit code pour debogguer YOUPIIII
-          printage(Bluetooth, SerialOrdi, 7);
-
-          digitalWrite(OFF, LOW);
-          digitalWrite(Batterie, LOW);
-          digitalWrite(Lumiere, HIGH);
-        }
-      }
-
-      if (((VoltageDemanderLum - 0.25) > VoltageSepic) && ((VoltageDemanderLum + 0.25) < VoltageSepic))
-      {
-        // Petit code pour debogguer YOUPIIII
-        printage(Bluetooth, SerialOrdi, 8);
-
-        // Securité pour la lumière pas qu'elle ouvre ferme rapidement
-        lastLumiere = CurrentMillis;
-        // Fermeture du MOSFET
-        digitalWrite(Lumiere, LOW);
-      }
-    }
-
-    // Code pour la Batterie Activation
-    if (ModeBatterie)
-    {
-      if (BatterieOuverte == false)
-      {
-        // Petit code pour debogguer YOUPIIII
-        printage(Bluetooth, SerialOrdi, 9);
-
-        VoltageDemanderBatt = VoltageDemanderBattVide;
-        if ((VoltageDemanderBatt < VoltageSepic) && ((VoltageDemanderBatt + 0.25) > VoltageSepic))
-        {
-          // Petit code pour debogguer YOUPIIII
-          printage(Bluetooth, SerialOrdi, 10);
-
-          BatterieOuverte = true;
-          digitalWrite(OFF, LOW);
-          digitalWrite(Lumiere, LOW);
-          digitalWrite(Batterie, HIGH);
-        }
-      }
-      if (BatterieOuverte == true)
-      {
-        // Petit code pour debogguer YOUPIIII
-        printage(Bluetooth, SerialOrdi, 11);
-
-        MoyennePIDBattOn = (CurrentMicros - LastValTempsBattOn) / (VoltageSepic - LastValVoltBattOn);
-        LastValTempsBattOn = CurrentMicros;
-        LastValVoltBattOn = VoltageSepic;
-
-        ValeurAjustementSepicBattOn = ((CourantDansLaBatterie - CourantBatterie) * CoeAjustPBatterie) + ((MoyennePIDBattOn)*CoeAjustIBatterie);
-
-        VoltageDemanderBatt = VoltageDemanderBattVide + ValeurAjustementSepicBattOn;
-      }
-
-      if (CourantBatterie < 4)
-      {
-        // Ouverture du MOSFET après le bon nombre de temps
-        if (CurrentMillis - lastBatterie > BatterieSecurite)
-        {
-          BatterieOuverte = true;
-        }
-      }
-
-      if (CourantBatterie >= 4)
-      {
-        BatterieOuverte = false;
-        // Fermeture du MOSFET
+        digitalWrite(OFF, LOW);
         digitalWrite(Batterie, LOW);
-
-        // Securité pour la lumière pas qu'elle ouvre ferme rapidement
-        lastBatterie = CurrentMillis;
+        digitalWrite(Lumiere, HIGH);
       }
     }
 
-    // Envoi du signal
-    if (CurrentMillis - lastsendtime > SendTime)
+    if (((VoltageDemanderLum - MaxVariation) > VoltageSepic) && ((VoltageDemanderLum + MaxVariation) < VoltageSepic))
     {
-      if (SerialOrdi)
+      // Petit code pour debogguer YOUPIIII
+      printage(Bluetooth, SerialOrdi, 8);
+
+      // Securité pour la lumière pas qu'elle ouvre ferme rapidement
+      lastLumiere = CurrentMillis;
+      // Fermeture du MOSFET
+      digitalWrite(Lumiere, LOW);
+    }
+  }
+
+  // Code pour la Batterie Activation
+  if (ModeBatterie)
+  {
+    if (BatterieOuverte == false)
+    {
+      // Petit code pour debogguer YOUPIIII
+      printage(Bluetooth, SerialOrdi, 9);
+
+      VoltageDemanderBatt = VoltageDemanderBattVide;
+      if ((VoltageDemanderBatt < VoltageSepic) && ((VoltageDemanderBatt + MaxVariation) > VoltageSepic))
       {
-        /*Serial.print("Courant : ");
-        Serial.print(Courant);
-        Serial.print("\t\tVoltage : ");
-        Serial.println(Voltage);*/
+        // Petit code pour debogguer YOUPIIII
+        printage(Bluetooth, SerialOrdi, 10);
+
+        BatterieOuverte = true;
+        digitalWrite(OFF, LOW);
+        digitalWrite(Lumiere, LOW);
+        digitalWrite(Batterie, HIGH);
       }
-      if (Bluetooth)
-      {
-        /*Serial1.print("Courant : ");
-        Serial1.print(Courant);
-        Serial1.print("\t\tVoltage : ");
-        Serial1.println(Voltage);*/
-      }
-      lastsendtime = CurrentMillis;
+    }
+    if (BatterieOuverte == true)
+    {
+      // Petit code pour debogguer YOUPIIII
+      printage(Bluetooth, SerialOrdi, 11);
+      ErreurBattOn = (CourantDansLaBatterie - CourantBatterie);
+      IPIDBattOn += (CurrentMicros - LastValTempsBattOn) * ErreurBattOn;
+      LastValTempsBattOn = CurrentMicros;
+
+      ValeurAjustementSepicBattOn = (ErreurBattOn * CoeAjustPBatterie) + ((IPIDBattOn)*CoeAjustIBatterie);
+
+      VoltageDemanderBatt = VoltageDemanderBattVide + ValeurAjustementSepicBattOn;
     }
 
-    if (SORTIE_SEPIC < 0)
+    if (CourantBatterie < 4)
     {
-      SORTIE_SEPIC = 0;
+      // Ouverture du MOSFET après le bon nombre de temps
+      if (CurrentMillis - lastBatterie > BatterieSecurite)
+      {
+        BatterieOuverte = true;
+      }
     }
-    if (COURANT < 0)
+
+    if (CourantBatterie >= 4)
     {
-      COURANT = 0;
+      BatterieOuverte = false;
+      // Fermeture du MOSFET
+      digitalWrite(Batterie, LOW);
+
+      // Securité pour la lumière pas qu'elle ouvre ferme rapidement
+      lastBatterie = CurrentMillis;
     }
-    if (VALEUR_BATTERIE < 0)
+  }
+
+  if (!ModeLumiere && !ModeBatterie)
+  {
+    BatterieOuverte = false;
+
+    digitalWrite(Lumiere, LOW);
+    digitalWrite(Batterie, LOW);
+    digitalWrite(OFF, HIGH);
+  }
+  // Envoi du signal
+  if (CurrentMillis - lastsendtime > SendTime)
+  {
+    if (SerialOrdi)
     {
-      VALEUR_BATTERIE = 0;
+      /*Serial.print("Courant : ");
+      Serial.print(Courant);
+      Serial.print("\t\tVoltage : ");
+      Serial.println(Voltage);*/
     }
-    if (VAL_BUCK < 0)
+    if (Bluetooth)
     {
-      VAL_BUCK = 0;
+      /*Serial1.print("Courant : ");
+      Serial1.print(Courant);
+      Serial1.print("\t\tVoltage : ");
+      Serial1.println(Voltage);*/
     }
+    lastsendtime = CurrentMillis;
+  }
+
+  if (SORTIE_SEPIC < 0)
+  {
+    SORTIE_SEPIC = 0;
+  }
+  if (COURANT < 0)
+  {
+    COURANT = 0;
+  }
+  if (VALEUR_BATTERIE < 0)
+  {
+    VALEUR_BATTERIE = 0;
+  }
+  if (VAL_BUCK < 0)
+  {
+    VAL_BUCK = 0;
   }
 }
