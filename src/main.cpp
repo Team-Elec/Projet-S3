@@ -30,7 +30,7 @@ int MaximumAjust = 14;
 int MinimumAjust = 10;
 
 // Voltage de BUCK
-float VoltageDemanderBuck = 9.3;
+float VoltageDemanderBuck = 9;
 
 // Voltage SEPIC
 int VoltageDemanderOFF = 10;
@@ -50,12 +50,13 @@ float VoltageDemanderLum, VoltageDemanderBattVide, VoltageDemanderBatt = 0;
 float IPIDBatt, IPIDBattOn, IPIDBuck, IPIDOFF, IPIDLum = 0;
 float ValeurAjustementSepicBatt, ValeurAjustementSepicBattOn, ValeurAjustementSepicLum, ValeurAjustementBuck, ValeurAjustementSepicOFF = 0;
 float ModeSepic = 0;
-float VoltageSepic, VoltageBuck, VoltageOFF, CourantBatterie = 0;
+float VoltageSepic, VoltageBuck, VoltageOFF, CourantBatterie, VoltageEntree = 0;
 float PWMSEPIC, PWMBUCK = 0;
-int PWMSEPICINT, PWMBUCKINT = 0;
+int16_t PWMSEPICINT, PWMBUCKINT = 0;
 int thermo1, thermo2, thermo3, thermo4, thermo5 = 0;
 float LastValTempsLum, LastValTempsBuck, LastValTempsBatt, LastValTempsBattOn, LastValTempsOFF = 0;
 float ErreurLum, ErreurBuck, ErreurBatt, ErreurBattOn, ErreurOFF = 0;
+float TensionDiode = 0.3;
 
 // Debounce
 unsigned lastsendtime, lastLumiere, lastBatterie = 0;
@@ -92,6 +93,7 @@ void loop()
   int16_t VAL_BUCK = ADS.readADC(3);
 
   // Transfert vers les vrai valeurs
+  VoltageEntree = (analogRead(Entree) * 40) / 1023;
   VoltageDemanderLum = ((analogRead(Ajust) * (MaximumAjust - MinimumAjust)) / 1023) + MinimumAjust;
   VoltageDemanderBattVide = VALEUR_BATTERIE;
   VoltageSepic = (SORTIE_SEPIC * 6.144) / 32768;
@@ -138,13 +140,14 @@ void loop()
     printage(Bluetooth, SerialOrdi, 1);
 
     ErreurLum = VoltageDemanderLum - VoltageSepic;
+    PWMSEPIC = ((VoltageDemanderLum + TensionDiode) / (VoltageEntree + VoltageDemanderLum + TensionDiode));
 
     IPIDLum += (CurrentMicros - LastValTempsLum) * ErreurLum;
     LastValTempsLum = CurrentMicros;
 
     ValeurAjustementSepicLum = (ErreurLum * CoeAjustPSepic) + (IPIDLum * CoeAjustISepic);
-    PWMSEPIC = PWMSEPIC + ValeurAjustementSepicLum;
-    PWMSEPICINT = int(PWMSEPIC);
+    PWMSEPIC += ValeurAjustementSepicLum;
+    PWMSEPICINT = int16_t(PWMSEPIC);
 
     if (PWMSEPICINT < 0)
     {
@@ -163,13 +166,14 @@ void loop()
     printage(Bluetooth, SerialOrdi, 2);
 
     ErreurBatt = VoltageDemanderBatt - VoltageSepic;
+    PWMSEPIC = ((VoltageDemanderBatt + TensionDiode) / (VoltageEntree + VoltageDemanderBatt + TensionDiode));
 
     IPIDBatt += (CurrentMicros - LastValTempsBatt) * ErreurBatt;
     LastValTempsBatt = CurrentMicros;
 
     ValeurAjustementSepicBatt = (ErreurBatt * CoeAjustPSepic) + (IPIDBatt * CoeAjustISepic);
-    PWMSEPIC = PWMSEPIC + int(ValeurAjustementSepicBatt);
-    PWMSEPICINT = int(PWMSEPIC);
+    PWMSEPIC += ValeurAjustementSepicBatt;
+    PWMSEPICINT = int16_t(PWMSEPIC);
 
     if (PWMSEPICINT < 0)
     {
@@ -191,12 +195,14 @@ void loop()
     printage(Bluetooth, SerialOrdi, 4);
 
     ErreurOFF = VoltageDemanderOFF - VoltageSepic;
+    PWMSEPIC = ((VoltageDemanderOFF + TensionDiode) / (VoltageEntree + VoltageDemanderOFF + TensionDiode));
+
     IPIDOFF += (CurrentMicros - LastValTempsOFF) * ErreurOFF;
     LastValTempsOFF = CurrentMicros;
 
     ValeurAjustementSepicOFF = (ErreurOFF * CoeAjustPSepic) + (IPIDOFF * CoeAjustISepic);
-    PWMSEPIC = PWMSEPIC + ValeurAjustementSepicOFF;
-    PWMSEPICINT = int(PWMSEPIC);
+    PWMSEPIC += ValeurAjustementSepicOFF;
+    PWMSEPICINT = int16_t(PWMSEPIC);
 
     if (PWMSEPICINT < 0)
     {
@@ -215,15 +221,16 @@ void loop()
   // Petit code pour debogguer YOUPIIII
   printage(Bluetooth, SerialOrdi, 5);
 
-  ErreurBuck = VoltageDemanderBuck - VoltageSepic;
+  ErreurBuck = (VoltageDemanderBuck + TensionDiode) - VoltageSepic;
+  PWMBUCK = ((VoltageDemanderBuck + TensionDiode) / VoltageEntree) * 255;
 
   IPIDBuck += (CurrentMicros - LastValTempsBuck) * ErreurBuck;
   LastValTempsBuck = CurrentMicros;
 
   ValeurAjustementBuck = (ErreurBuck * CoeAjustPBuck) + (IPIDBuck * CoeAjustIBuck);
 
-  PWMBUCK = PWMBUCK + ValeurAjustementBuck;
-  PWMBUCKINT = int(PWMBUCK);
+  PWMBUCK += ValeurAjustementBuck;
+  PWMBUCKINT = int16_t(PWMBUCK);
   if (PWMBUCKINT < 0)
   {
     PWMBUCKINT = 0;
@@ -321,6 +328,7 @@ void loop()
     }
   }
 
+  // Code pour le circuit SEPIC à OFF
   if (!ModeLumiere && !ModeBatterie)
   {
     BatterieOuverte = false;
@@ -329,22 +337,23 @@ void loop()
     digitalWrite(Batterie, LOW);
     digitalWrite(OFF, HIGH);
   }
+
   // Envoi du signal
   if (CurrentMillis - lastsendtime > SendTime)
   {
     if (SerialOrdi)
     {
-      /*Serial.print("Courant : ");
-      Serial.print(Courant);
-      Serial.print("\t\tVoltage : ");
-      Serial.println(Voltage);*/
+      Serial.print("PWM BUCK : ");
+      Serial.print(PWMBUCKINT);
+      Serial.print(" \tPWM SEPIC : ");
+      Serial.println(PWMSEPICINT);
     }
     if (Bluetooth)
     {
-      /*Serial1.print("Courant : ");
-      Serial1.print(Courant);
-      Serial1.print("\t\tVoltage : ");
-      Serial1.println(Voltage);*/
+      Serial1.print("PWM BUCK : ");
+      Serial1.print(PWMBUCKINT);
+      Serial1.print(" \tPWM SEPIC : ");
+      Serial1.println(PWMSEPICINT);
     }
     lastsendtime = CurrentMillis;
   }

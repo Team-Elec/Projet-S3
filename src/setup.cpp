@@ -16,6 +16,7 @@ void appelVariables()
 
     pinMode(Mode, INPUT);
     pinMode(Ajust, INPUT);
+    pinMode(Entree, INPUT);
 
     pinMode(Batterie, OUTPUT);
     pinMode(Lumiere, OUTPUT);
