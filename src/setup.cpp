@@ -16,14 +16,12 @@ void appelVariables()
 
     pinMode(Mode, INPUT);
     pinMode(Ajust, INPUT);
-    pinMode(Entree, INPUT);
 
     pinMode(Batterie, OUTPUT);
     pinMode(Lumiere, OUTPUT);
     pinMode(BlueTooth, OUTPUT);
 
     pinMode(SEPIC, OUTPUT);
-    pinMode(BUCK, OUTPUT);
 
     pinMode(OFF, OUTPUT);
 }

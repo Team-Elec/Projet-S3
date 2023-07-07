@@ -14,8 +14,6 @@
 
 #define Mode A1
 
-#define Entree A3
-
 #define Ajust A0
 
 #define BlueTooth 25
@@ -24,7 +22,6 @@
 #define Batterie 34
 #define OFF 26
 
-#define BUCK 11
 #define SEPIC 9
 
 

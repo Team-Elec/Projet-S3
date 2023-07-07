@@ -20,17 +20,12 @@ bool SerialOrdi = false;
 // Ajustement PID
 float CoeAjustPSepic = 0.015;
 float CoeAjustISepic = 0.025;
-float CoeAjustPBuck = 0.04;
-float CoeAjustIBuck = 0.099;
 float CoeAjustPBatterie = 6;
 float CoeAjustIBatterie = 4;
 
 // Valeur des ajustement du potentiomètre
 int MaximumAjust = 14;
 int MinimumAjust = 10;
-
-// Voltage de BUCK
-float VoltageDemanderBuck = 9;
 
 // Voltage SEPIC
 int VoltageDemanderOFF = 10;
@@ -47,15 +42,15 @@ unsigned long CurrentMillis = 0;
 unsigned long CurrentMicros = 0;
 
 float VoltageDemanderLum, VoltageDemanderBattVide, VoltageDemanderBatt = 0;
-float IPIDBatt, IPIDBattOn, IPIDBuck, IPIDOFF, IPIDLum = 0;
-float ValeurAjustementSepicBatt, ValeurAjustementSepicBattOn, ValeurAjustementSepicLum, ValeurAjustementBuck, ValeurAjustementSepicOFF = 0;
+float IPIDBatt, IPIDBattOn, IPIDOFF, IPIDLum = 0;
+float ValeurAjustementSepicBatt, ValeurAjustementSepicBattOn, ValeurAjustementSepicLum, ValeurAjustementSepicOFF = 0;
 float ModeSepic = 0;
-float VoltageSepic, VoltageBuck, VoltageOFF, CourantBatterie, VoltageEntree = 0;
-float PWMSEPIC, PWMBUCK = 0;
-int16_t PWMSEPICINT, PWMBUCKINT = 0;
+float VoltageSepic, VoltageOFF, CourantBatterie, VoltageEntree = 0;
+float PWMSEPIC = 0;
+int16_t PWMSEPICINT = 0;
 int thermo1, thermo2, thermo3, thermo4, thermo5 = 0;
-float LastValTempsLum, LastValTempsBuck, LastValTempsBatt, LastValTempsBattOn, LastValTempsOFF = 0;
-float ErreurLum, ErreurBuck, ErreurBatt, ErreurBattOn, ErreurOFF = 0;
+float LastValTempsLum, LastValTempsBatt, LastValTempsBattOn, LastValTempsOFF = 0;
+float ErreurLum, ErreurBatt, ErreurBattOn, ErreurOFF = 0;
 float TensionDiode = 0.3;
 
 // Debounce
@@ -90,15 +85,14 @@ void loop()
   int16_t SORTIE_SEPIC = ADS.readADC(0);
   int16_t VALEUR_BATTERIE = ADS.readADC(1);
   int16_t COURANT = ADS.readADC(2);
-  int16_t VAL_BUCK = ADS.readADC(3);
+  int16_t ENTREE = ADS.readADC(3);
 
   // Transfert vers les vrai valeurs
-  VoltageEntree = (analogRead(Entree) * 40) / 1023;
   VoltageDemanderLum = ((analogRead(Ajust) * (MaximumAjust - MinimumAjust)) / 1023) + MinimumAjust;
   VoltageDemanderBattVide = VALEUR_BATTERIE;
   VoltageSepic = (SORTIE_SEPIC * 6.144) / 32768;
   CourantBatterie = (COURANT * 6.144) / 32768;
-  VoltageBuck = (VAL_BUCK * 6.144) / 32768;
+  VoltageEntree = (ENTREE * 6.144) / 32768;
 
   // Lecture pour le mode du SEPIC (Potentiomètre)
   ModeSepic = analogRead(Mode);
@@ -216,32 +210,6 @@ void loop()
     analogWrite(SEPIC, PWMSEPICINT);
   }
 
-  // Code de Buck
-
-  // Petit code pour debogguer YOUPIIII
-  printage(Bluetooth, SerialOrdi, 5);
-
-  ErreurBuck = (VoltageDemanderBuck + TensionDiode) - VoltageSepic;
-  PWMBUCK = ((VoltageDemanderBuck + TensionDiode) / VoltageEntree) * 255;
-
-  IPIDBuck += (CurrentMicros - LastValTempsBuck) * ErreurBuck;
-  LastValTempsBuck = CurrentMicros;
-
-  ValeurAjustementBuck = (ErreurBuck * CoeAjustPBuck) + (IPIDBuck * CoeAjustIBuck);
-
-  PWMBUCK += ValeurAjustementBuck;
-  PWMBUCKINT = int16_t(PWMBUCK);
-  if (PWMBUCKINT < 0)
-  {
-    PWMBUCKINT = 0;
-  }
-  if (PWMBUCKINT > 255)
-  {
-    PWMBUCKINT = 255;
-  }
-
-  analogWrite(BUCK, PWMBUCKINT);
-
   // POSSIBILITÉ DE PROBLÈME A VÉRIFIER
   //  Code pour la Lumiere Activation
   if (ModeLumiere)
@@ -343,15 +311,11 @@ void loop()
   {
     if (SerialOrdi)
     {
-      Serial.print("PWM BUCK : ");
-      Serial.print(PWMBUCKINT);
       Serial.print(" \tPWM SEPIC : ");
       Serial.println(PWMSEPICINT);
     }
     if (Bluetooth)
     {
-      Serial1.print("PWM BUCK : ");
-      Serial1.print(PWMBUCKINT);
       Serial1.print(" \tPWM SEPIC : ");
       Serial1.println(PWMSEPICINT);
     }
@@ -369,9 +333,5 @@ void loop()
   if (VALEUR_BATTERIE < 0)
   {
     VALEUR_BATTERIE = 0;
-  }
-  if (VAL_BUCK < 0)
-  {
-    VAL_BUCK = 0;
   }
 }
