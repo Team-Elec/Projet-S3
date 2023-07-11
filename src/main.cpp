@@ -9,7 +9,7 @@ ADS1115 ADS(0x48);
 // Valeurs importante a changer si jamais
 // Vitesse envoie et vitesse de sécurite anti flicker
 // En milisecondes
-#define SendTime 1000
+#define SendTime 10
 #define LumiereSecurite 2000
 #define BatterieSecurite 2000
 
@@ -26,17 +26,14 @@ float CoeAjustPBatterie = 6;
 float CoeAjustIBatterie = 4;
 
 // Valeur des ajustement du potentiomètre
-float MaximumAjust = 14;
+float MaximumAjust = 20;
 float MinimumAjust = 10;
-
-// Voltage SEPIC
-int VoltageDemanderOFF = 0;
 
 // Courant dans la batterie (en Volt)
 float CourantDansLaBatterie = 2.5;
 
 // Maximum de variation avant la fermeture (Valeur + chiffre et Valeur - chiffre)
-float MaxVariation = 0.5;
+float MaxVariation = 20;
 
 // Valeur de la diode
 float TensionDiode = 0.7;
@@ -47,15 +44,16 @@ unsigned long CurrentMillis = 0;
 unsigned long CurrentMicros = 0;
 
 float VoltageDemanderLum, VoltageDemanderBattVide, VoltageDemanderBatt = 0;
-float IPIDBatt, IPIDBattOn, IPIDOFF, IPIDLum = 0;
-float ValeurAjustementSepicBatt, ValeurAjustementSepicBattOn, ValeurAjustementSepicLum, ValeurAjustementSepicOFF = 0;
+float IPIDBatt, IPIDBattOn, IPIDLum = 0;
+float ValeurAjustementSepicBatt, ValeurAjustementSepicBattOn, ValeurAjustementSepicLum = 0;
 float ModeSepic = 0;
-float VoltageSepic, VoltageOFF, CourantBatterie, VoltageEntree = 0;
+float VoltageSepic, CourantBatterie, VoltageEntree = 0;
 float PWMSEPIC = 0;
 int16_t PWMSEPICINT = 0;
 int thermo1, thermo2, thermo3, thermo4, thermo5 = 0;
-float LastValTempsLum, LastValTempsBatt, LastValTempsBattOn, LastValTempsOFF = 0;
+float LastValTempsLum, LastValTempsBatt, LastValTempsBattOn = 0;
 float ErreurLum, ErreurBatt, ErreurBattOn, ErreurOFF = 0;
+int16_t SORTIE_SEPIC, VALEUR_BATTERIE, COURANT, ENTREE = 0;
 
 // Debounce
 unsigned lastsendtime, lastLumiere, lastBatterie = 0;
@@ -63,9 +61,11 @@ unsigned lastsendtime, lastLumiere, lastBatterie = 0;
 // Modes et protections
 bool ModeBatterie = false;
 bool ModeLumiere = false;
-bool ProtectMode = false;
+bool ProtectMode = true;
 bool BatterieInitiale = false;
 bool BatterieOuverte = false;
+
+double diviseur = (1130000.0 / 130000.0);
 
 void setup()
 {
@@ -80,23 +80,37 @@ void setup()
 
 void loop()
 {
-
   // Pour le temps dans le Code
   CurrentMillis = millis();
   CurrentMicros = micros();
 
   // Lecture des ports du ADS1115
-  int16_t SORTIE_SEPIC = ADS.readADC(0);
-  int16_t VALEUR_BATTERIE = ADS.readADC(1);
-  int16_t COURANT = ADS.readADC(2);
-  int16_t ENTREE = ADS.readADC(3);
+  if (ADS.readADC(0) < 25000)
+  {
+    SORTIE_SEPIC = ADS.readADC(0);
+  }
+
+  if (ADS.readADC(1) < 25000)
+  {
+    VALEUR_BATTERIE = ADS.readADC(1);
+  }
+
+  if (ADS.readADC(2) < 25000)
+  {
+    COURANT = ADS.readADC(2);
+  }
+
+  if (ADS.readADC(3) < 25000)
+  {
+    ENTREE = ADS.readADC(3);
+  }
 
   // Transfert vers les vrai valeurs
   VoltageDemanderLum = ((analogRead(Ajust) * (MaximumAjust - MinimumAjust)) / 1023) + MinimumAjust;
-  VoltageDemanderBattVide = VALEUR_BATTERIE;
-  VoltageSepic = (SORTIE_SEPIC * 6.144) / 32768;
+  VoltageDemanderBattVide = (VALEUR_BATTERIE) * diviseur;
+  VoltageSepic = ((SORTIE_SEPIC * 6.144) / 32768) * diviseur;
   CourantBatterie = (COURANT * 6.144) / 32768;
-  VoltageEntree = (ENTREE * 6.144) / 32768;
+  VoltageEntree = ((ENTREE * 6.144) / 32768) * diviseur;
 
   // Lecture pour le mode du SEPIC (Potentiomètre)
   ModeSepic = analogRead(Mode);
@@ -138,22 +152,21 @@ void loop()
     printage(Bluetooth, SerialOrdi, 1);
 
     ErreurLum = VoltageDemanderLum - VoltageSepic;
-    PWMSEPIC = ((VoltageDemanderLum + TensionDiode) / (VoltageEntree + VoltageDemanderLum + TensionDiode));
-
-    IPIDLum += (CurrentMicros - LastValTempsLum) * ErreurLum;
+    PWMSEPIC = ((VoltageDemanderLum + TensionDiode) / (VoltageEntree + VoltageDemanderLum + TensionDiode))*255;
+    IPIDLum += ((CurrentMicros - LastValTempsLum)/1000000) * ErreurLum;
     LastValTempsLum = CurrentMicros;
 
     ValeurAjustementSepicLum = (ErreurLum * CoeAjustPSepic) + (IPIDLum * CoeAjustISepic);
-    PWMSEPIC += ValeurAjustementSepicLum;
-    PWMSEPICINT = int16_t(PWMSEPIC);
+    PWMSEPIC = PWMSEPIC + ValeurAjustementSepicLum;
+    PWMSEPICINT = PWMSEPIC;
 
     if (PWMSEPICINT < 0)
     {
       PWMSEPICINT = 0;
     }
-    if (PWMSEPICINT > 255)
+    if (PWMSEPICINT > 179)
     {
-      PWMSEPICINT = 255;
+      PWMSEPICINT = 179;
     }
     analogWrite(SEPIC, PWMSEPICINT);
   }
@@ -166,12 +179,12 @@ void loop()
     ErreurBatt = VoltageDemanderBatt - VoltageSepic;
     PWMSEPIC = ((VoltageDemanderBatt + TensionDiode) / (VoltageEntree + VoltageDemanderBatt + TensionDiode));
 
-    IPIDBatt += (CurrentMicros - LastValTempsBatt) * ErreurBatt;
+    IPIDBatt += ((CurrentMicros - LastValTempsBatt)/1000000) * ErreurBatt;
     LastValTempsBatt = CurrentMicros;
 
     ValeurAjustementSepicBatt = (ErreurBatt * CoeAjustPSepic) + (IPIDBatt * CoeAjustISepic);
     PWMSEPIC += ValeurAjustementSepicBatt;
-    PWMSEPICINT = int16_t(PWMSEPIC);
+    PWMSEPICINT = PWMSEPIC;
 
     if (PWMSEPICINT < 0)
     {
@@ -181,36 +194,6 @@ void loop()
     {
       PWMSEPICINT = 255;
     }
-    analogWrite(SEPIC, PWMSEPICINT);
-  }
-
-  if (!ModeLumiere && !ModeBatterie)
-  {
-    // Petit code pour debogguer YOUPIIII
-    printage(Bluetooth, SerialOrdi, 3);
-
-    // Petit code pour debogguer YOUPIIII
-    printage(Bluetooth, SerialOrdi, 4);
-
-    ErreurOFF = VoltageDemanderOFF - VoltageSepic;
-    PWMSEPIC = ((VoltageDemanderOFF + TensionDiode) / (VoltageEntree + VoltageDemanderOFF + TensionDiode));
-
-    IPIDOFF += (CurrentMicros - LastValTempsOFF) * ErreurOFF;
-    LastValTempsOFF = CurrentMicros;
-
-    ValeurAjustementSepicOFF = (ErreurOFF * CoeAjustPSepic) + (IPIDOFF * CoeAjustISepic);
-    PWMSEPIC += ValeurAjustementSepicOFF;
-    PWMSEPICINT = int16_t(PWMSEPIC);
-
-    if (PWMSEPICINT < 0)
-    {
-      PWMSEPICINT = 0;
-    }
-    if (PWMSEPICINT > 255)
-    {
-      PWMSEPICINT = 255;
-    }
-
     analogWrite(SEPIC, PWMSEPICINT);
   }
 
@@ -229,7 +212,6 @@ void loop()
         // Petit code pour debogguer YOUPIIII
         printage(Bluetooth, SerialOrdi, 7);
 
-        digitalWrite(OFF, LOW);
         digitalWrite(Batterie, LOW);
         digitalWrite(Lumiere, HIGH);
       }
@@ -262,7 +244,7 @@ void loop()
         printage(Bluetooth, SerialOrdi, 10);
 
         BatterieOuverte = true;
-        digitalWrite(OFF, LOW);
+      
         digitalWrite(Lumiere, LOW);
         digitalWrite(Batterie, HIGH);
       }
@@ -298,16 +280,6 @@ void loop()
       // Securité pour la lumière pas qu'elle ouvre ferme rapidement
       lastBatterie = CurrentMillis;
     }
-  }
-
-  // Code pour le circuit SEPIC à OFF
-  if (!ModeLumiere && !ModeBatterie)
-  {
-    BatterieOuverte = false;
-
-    digitalWrite(Lumiere, LOW);
-    digitalWrite(Batterie, LOW);
-    digitalWrite(OFF, HIGH);
   }
 
   // Envoi du signal

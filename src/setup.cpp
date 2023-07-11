@@ -22,8 +22,6 @@ void appelVariables()
     pinMode(BlueTooth, OUTPUT);
 
     pinMode(SEPIC, OUTPUT);
-
-    pinMode(OFF, OUTPUT);
 }
 
 void VitessePWM()
