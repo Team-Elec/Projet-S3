@@ -16,7 +16,7 @@ ADS1115 ADS(0x48);
 // Lieu des sortie Serial
 bool Bluetooth = false;
 bool SerialOrdi = false;
-bool SerialOrdiVal = true;
+bool SerialOrdiVal = false;
 bool BluetoothVal = false;
 
 // Ajustement PID
@@ -33,10 +33,10 @@ float MinimumAjust = 10;
 float CourantDansLaBatterie = 2.5;
 
 // Maximum de variation avant la fermeture (Valeur + chiffre et Valeur - chiffre)
-float MaxVariation = 20;
+float MaxVariation = 1;
 
 // Valeur de la diode
-float TensionDiode = 0.7;
+float TensionDiode = 0.3;
 
 // Initiation de valeurs à 0
 // Pas vraiment important tant que ça
@@ -61,11 +61,13 @@ unsigned lastsendtime, lastLumiere, lastBatterie = 0;
 // Modes et protections
 bool ModeBatterie = false;
 bool ModeLumiere = false;
-bool ProtectMode = true;
+bool ProtectMode = false;
 bool BatterieInitiale = false;
 bool BatterieOuverte = false;
 
-double diviseur = (1130000.0 / 130000.0);
+double diviseur = (1114000.0 / 114000.0);
+
+int maxVal = ((38 * (1/diviseur)) * 32750) / 6.144;
 
 void setup()
 {
@@ -85,22 +87,22 @@ void loop()
   CurrentMicros = micros();
 
   // Lecture des ports du ADS1115
-  if (ADS.readADC(0) < 25000)
+  if (ADS.readADC(0) < maxVal)
   {
     SORTIE_SEPIC = ADS.readADC(0);
   }
 
-  if (ADS.readADC(1) < 25000)
+  if (ADS.readADC(1) < maxVal)
   {
     VALEUR_BATTERIE = ADS.readADC(1);
   }
 
-  if (ADS.readADC(2) < 25000)
+  if (ADS.readADC(2) < maxVal)
   {
     COURANT = ADS.readADC(2);
   }
 
-  if (ADS.readADC(3) < 25000)
+  if (ADS.readADC(3) < maxVal)
   {
     ENTREE = ADS.readADC(3);
   }
@@ -143,6 +145,7 @@ void loop()
       ModeLumiere = true;
     }
   }
+
 //Remise à zéro
   if(VoltageEntree < 5.0){
       PWMSEPIC = 0;
@@ -167,7 +170,7 @@ void loop()
     LastValTempsLum = CurrentMicros;
 
     ValeurAjustementSepicLum = (ErreurLum * CoeAjustPSepic) + (IPIDLum * CoeAjustISepic);
-    PWMSEPIC = PWMSEPIC + ValeurAjustementSepicLum;
+    PWMSEPIC += ValeurAjustementSepicLum;
     PWMSEPICINT = PWMSEPIC;
 
     if (PWMSEPICINT < 0)
@@ -200,12 +203,17 @@ void loop()
     {
       PWMSEPICINT = 0;
     }
-    if (PWMSEPICINT > 255)
+    if (PWMSEPICINT > 179)
     {
-      PWMSEPICINT = 255;
+      PWMSEPICINT = 179;
     }
     analogWrite(SEPIC, PWMSEPICINT);
   }
+
+if(!ModeBatterie && !ModeLumiere){
+  PWMSEPICINT = 0;
+  analogWrite(SEPIC, PWMSEPICINT);
+}
 
   // POSSIBILITÉ DE PROBLÈME A VÉRIFIER
   //  Code pour la Lumiere Activation
