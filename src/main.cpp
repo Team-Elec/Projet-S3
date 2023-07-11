@@ -26,7 +26,7 @@ float CoeAjustPBatterie = 6;
 float CoeAjustIBatterie = 4;
 
 // Valeur des ajustement du potentiomètre
-int MaximumAjust = 14; 
+int MaximumAjust = 14;
 int MinimumAjust = 10;
 
 // Voltage SEPIC
@@ -315,6 +315,19 @@ void loop()
   {
     if (SerialOrdiVal)
     {
+      Serial.print("Mode : ");
+      if (ModeLumiere)
+      {
+        Serial.print("Lumière");
+      }
+      if (ModeBatterie)
+      {
+        Serial.print("Batterie");
+      }
+      if (!ModeLumiere && !ModeBatterie)
+      {
+        Serial.print("Fuckall");
+      }
       Serial.print(" \tValeur entrée : ");
       Serial.print(VoltageEntree);
 
@@ -331,6 +344,19 @@ void loop()
     }
     if (BluetoothVal)
     {
+      Serial1.print("Mode : ");
+      if (ModeLumiere)
+      {
+        Serial.print("Lumière");
+      }
+      if (ModeBatterie)
+      {
+        Serial1.print("Batterie");
+      }
+      if (!ModeLumiere && !ModeBatterie)
+      {
+        Serial1.print("Fuckall");
+      }
       Serial1.print(" \tValeur entrée : ");
       Serial1.print(VoltageEntree);
 
