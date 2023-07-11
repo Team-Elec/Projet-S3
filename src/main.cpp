@@ -26,8 +26,8 @@ float CoeAjustPBatterie = 6;
 float CoeAjustIBatterie = 4;
 
 // Valeur des ajustement du potentiomètre
-int MaximumAjust = 14;
-int MinimumAjust = 10;
+float MaximumAjust = 14;
+float MinimumAjust = 10;
 
 // Voltage SEPIC
 int VoltageDemanderOFF = 0;
@@ -39,7 +39,7 @@ float CourantDansLaBatterie = 2.5;
 float MaxVariation = 0.5;
 
 // Valeur de la diode
-float TensionDiode = 0.3;
+float TensionDiode = 0.7;
 
 // Initiation de valeurs à 0
 // Pas vraiment important tant que ça
