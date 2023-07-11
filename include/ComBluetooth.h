@@ -1,7 +1,6 @@
-#ifndef COMCHINOIS_H
-#define COMCHINOIS_H
+#ifndef COMBLUETOOTH_H
+#define COMBLUETOOTH_H
 
-int lectureChinois();
 void printage(bool Bluetooth, bool SerialOrdi, int val);
 
 #endif

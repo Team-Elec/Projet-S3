@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include "ADS1X15.h"
 #include "setup.h"
-#include "ComChinois.h"
+#include "ComBluetooth.h"
 
 // Variables pour le ADS
 ADS1115 ADS(0x48);
@@ -16,6 +16,8 @@ ADS1115 ADS(0x48);
 // Lieu des sortie Serial
 bool Bluetooth = false;
 bool SerialOrdi = false;
+bool SerialOrdiVal = false;
+bool BluetoothVal = false;
 
 // Ajustement PID
 float CoeAjustPSepic = 0.015;
@@ -24,17 +26,20 @@ float CoeAjustPBatterie = 6;
 float CoeAjustIBatterie = 4;
 
 // Valeur des ajustement du potentiomètre
-int MaximumAjust = 14;
+int MaximumAjust = 14; 
 int MinimumAjust = 10;
 
 // Voltage SEPIC
-int VoltageDemanderOFF = 10;
+int VoltageDemanderOFF = 0;
 
 // Courant dans la batterie (en Volt)
 float CourantDansLaBatterie = 2.5;
 
 // Maximum de variation avant la fermeture (Valeur + chiffre et Valeur - chiffre)
 float MaxVariation = 0.5;
+
+// Valeur de la diode
+float TensionDiode = 0.3;
 
 // Initiation de valeurs à 0
 // Pas vraiment important tant que ça
@@ -51,7 +56,6 @@ int16_t PWMSEPICINT = 0;
 int thermo1, thermo2, thermo3, thermo4, thermo5 = 0;
 float LastValTempsLum, LastValTempsBatt, LastValTempsBattOn, LastValTempsOFF = 0;
 float ErreurLum, ErreurBatt, ErreurBattOn, ErreurOFF = 0;
-float TensionDiode = 0.3;
 
 // Debounce
 unsigned lastsendtime, lastLumiere, lastBatterie = 0;
@@ -309,15 +313,37 @@ void loop()
   // Envoi du signal
   if (CurrentMillis - lastsendtime > SendTime)
   {
-    if (SerialOrdi)
+    if (SerialOrdiVal)
     {
+      Serial.print(" \tValeur entrée : ");
+      Serial.print(VoltageEntree);
+
+      Serial.print(" \tTension demander Lumière : ");
+      Serial.print(VoltageDemanderLum);
+
+      Serial.print(" \tTension Sepic : ");
+      Serial.print(VoltageSepic);
+
       Serial.print(" \tPWM SEPIC : ");
-      Serial.println(PWMSEPICINT);
+      Serial.print(PWMSEPICINT);
+
+      Serial.print("\n");
     }
-    if (Bluetooth)
+    if (BluetoothVal)
     {
+      Serial1.print(" \tValeur entrée : ");
+      Serial1.print(VoltageEntree);
+
+      Serial1.print(" \tTension demander Lumière : ");
+      Serial1.print(VoltageDemanderLum);
+
+      Serial1.print(" \tTension Sepic : ");
+      Serial1.print(VoltageSepic);
+
       Serial1.print(" \tPWM SEPIC : ");
-      Serial1.println(PWMSEPICINT);
+      Serial1.print(PWMSEPICINT);
+
+      Serial1.print("\n");
     }
     lastsendtime = CurrentMillis;
   }
