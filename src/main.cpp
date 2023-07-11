@@ -16,12 +16,12 @@ ADS1115 ADS(0x48);
 // Lieu des sortie Serial
 bool Bluetooth = false;
 bool SerialOrdi = false;
-bool SerialOrdiVal = false;
+bool SerialOrdiVal = true;
 bool BluetoothVal = false;
 
 // Ajustement PID
-float CoeAjustPSepic = 0.015;
-float CoeAjustISepic = 0.025;
+float CoeAjustPSepic = 1;
+float CoeAjustISepic = 2;
 float CoeAjustPBatterie = 6;
 float CoeAjustIBatterie = 4;
 
