@@ -21,12 +21,12 @@ bool BluetoothVal = false;
 
 // Ajustement PID
 float CoeAjustPSepic = 1;
-float CoeAjustISepic = 2;
+float CoeAjustISepic = 2.1;
 float CoeAjustPBatterie = 6;
 float CoeAjustIBatterie = 4;
 
 // Valeur des ajustement du potentiomètre
-float MaximumAjust = 20;
+float MaximumAjust = 14;
 float MinimumAjust = 10;
 
 // Courant dans la batterie (en Volt)
@@ -142,6 +142,16 @@ void loop()
       ModeBatterie = false;
       ModeLumiere = true;
     }
+  }
+//Remise à zéro
+  if(VoltageEntree < 5.0){
+      PWMSEPIC = 0;
+      PWMSEPICINT = 0;
+      IPIDLum = 0;
+      IPIDBatt = 0;
+      ValeurAjustementSepicBatt = 0;
+      ValeurAjustementSepicBattOn = 0;
+      ValeurAjustementSepicLum = 0;
   }
 
   // Ajustement des convertisseur
