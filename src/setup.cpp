@@ -21,12 +21,14 @@ void appelVariables()
 
     pinMode(PWMInverse1, OUTPUT);
     pinMode(PWMInverse2, OUTPUT);
+
+    pinMode(ValCourant, INPUT);
 }
 
 void VitessePWM()
 {
-    // PIN D11 D12
-    TCCR1B = TCCR1B & B11111000 | B00000001;
-    // PIN D9 D10
-    TCCR2B = TCCR2B & B11111000 | B00000001;
+    // PIN D4 D13 à 7812Hz
+    TCCR0B = TCCR0B & B11111000 || B00000010;
+    // PIN D6 D7 D8 à 3921 Hz
+    TCCR4B = TCCR4B & B11111000 || B00000010;
 }

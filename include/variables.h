@@ -15,6 +15,7 @@
 //Valeur de sortie du moteur dépendament des modes
 #define ValSortieMoteur1 A0
 #define ValSortieMoteur2 A8
+#define ValCourant A10
 
 #define BlueTooth 25
 
