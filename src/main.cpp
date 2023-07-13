@@ -9,7 +9,7 @@ ADS1115 ADS(0x48);
 // Valeurs importante a changer si jamais
 // Vitesse envoie et vitesse de sécurite anti flicker
 // En milisecondes
-#define SendTime 10
+#define SendTime 100
 #define LumiereSecurite 2000
 #define BatterieSecurite 2000
 
@@ -21,7 +21,7 @@ bool BluetoothVal = false;
 
 // Ajustement PID
 float CoeAjustPSepic = 1;
-float CoeAjustISepic = 2.1;
+float CoeAjustISepic = 2.2;
 float CoeAjustPBatterie = 6;
 float CoeAjustIBatterie = 4;
 
@@ -65,7 +65,9 @@ bool ProtectMode = false;
 bool BatterieInitiale = false;
 bool BatterieOuverte = false;
 
-double diviseur = (1114000.0 / 114000.0);
+float ValResDiv = 130000.0;
+
+double diviseur = ((1000000 + ValResDiv) / ValResDiv);
 
 int maxVal = ((38 * (1/diviseur)) * 32750) / 6.144;
 
