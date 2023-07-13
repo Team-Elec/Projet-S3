@@ -33,7 +33,7 @@ float MinimumAjust = 10;
 float CourantDansLaBatterie = 2.5;
 
 // Maximum de variation avant la fermeture (Valeur + chiffre et Valeur - chiffre)
-float MaxVariation = 1;
+float MaxVariation = 2;
 
 // Valeur de la diode
 float TensionDiode = 0.3;
