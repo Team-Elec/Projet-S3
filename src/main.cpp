@@ -9,6 +9,6 @@ void setup() {
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
+  //Inverse 1 va avec PWM1 
 }
 
