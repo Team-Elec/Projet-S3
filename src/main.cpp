@@ -42,6 +42,9 @@ float RendementSepic = 0.75;
 // Valeur de la diode
 float TensionDiode = 0.3;
 
+//Valeur de MaxPWM
+int MaxPWM = 255;
+
 // Initiation de valeurs à 0
 // Pas vraiment important tant que ça
 unsigned long CurrentMillis = 0;
@@ -65,10 +68,10 @@ unsigned lastsendtime, lastLumiere, lastBatterie = 0;
 // Modes et protections
 bool ModeBatterie = false;
 bool ModeLumiere = false;
-bool ProtectMode = true;
+bool ProtectMode = false;
 bool BatterieDebut = true;
 bool BatterieFin = false;
-bool BatterieFini = true;
+bool BatterieFini = false;
 
 float ValResDiv = 130000.0;
 
@@ -144,7 +147,7 @@ void loop()
     {
       ModeBatterie = false;
       ModeLumiere = false;
-      BatterieFini = true;
+      BatterieFini = false;
     }
     // Mode Lumière
     if (ModeSepic > 850)
@@ -187,9 +190,9 @@ void loop()
     {
       PWMSEPICINT = 0;
     }
-    if (PWMSEPICINT > 179)
+    if (PWMSEPICINT > MaxPWM)
     {
-      PWMSEPICINT = 179;
+      PWMSEPICINT = MaxPWM;
     }
     analogWrite(SEPIC, PWMSEPICINT);
   }
@@ -213,9 +216,9 @@ void loop()
     {
       PWMSEPICINT = 0;
     }
-    if (PWMSEPICINT > 179)
+    if (PWMSEPICINT > MaxPWM)
     {
-      PWMSEPICINT = 179;
+      PWMSEPICINT = MaxPWM;
     }
     analogWrite(SEPIC, PWMSEPICINT);
   }
