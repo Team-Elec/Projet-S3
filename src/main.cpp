@@ -42,7 +42,7 @@ float RendementSepic = 0.75;
 // Valeur de la diode
 float TensionDiode = 0.3;
 
-//Valeur de MaxPWM
+// Valeur de MaxPWM
 int MaxPWM = 255;
 
 // Initiation de valeurs à 0
@@ -92,6 +92,15 @@ void setup()
 
 void loop()
 {
+  if (Bluetooth || BluetoothVal)
+  {
+    digitalWrite(BlueTooth, HIGH);
+  }
+  else
+  {
+    digitalWrite(BlueTooth, LOW);
+  }
+
   // Pour le temps dans le Code
   CurrentMillis = millis();
   CurrentMicros = micros();
@@ -121,7 +130,7 @@ void loop()
   VoltageDemanderLum = ((analogRead(Ajust) * (MaximumAjust - MinimumAjust)) / 1023) + MinimumAjust;
   VoltageDemanderBattVide = (VALEUR_BATTERIE)*diviseur;
   VoltageSepic = ((SORTIE_SEPIC * 6.144) / 32768) * diviseur;
-  CourantBatterie = (COURANT * 6.144) / 32768;
+  CourantBatterie = ((COURANT * 6.144) / 32768);
   VoltageEntree = ((ENTREE * 6.144) / 32768) * diviseur;
 
   // Lecture pour le mode du SEPIC (Potentiomètre)
@@ -268,6 +277,7 @@ void loop()
         printage(Bluetooth, SerialOrdi, 11);
         VoltageDemanderBatt = MaxBattterie;
 
+        // arret à 50 milis ampère
         if (CourantBatterie < 0.25)
         {
           BatterieFini = true;
