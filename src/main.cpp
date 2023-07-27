@@ -3,6 +3,21 @@
 #include "variables.h"
 #include "comchinois.h"
 
+#define SendTime 10000
+
+int LastSendTime = 0;
+float T1 = 0;
+float T2 = 0;
+float C = 0;
+float Tension1 = 0;
+float Courant = 0;
+float Tension2 = 0;
+int NbCourant = 0;
+float CourantVal = 0;
+float CourantMoyen = 0;
+int PWM = 0;
+float Gain = 40;
+
 void setup()
 {
   appelVariables();
@@ -11,22 +26,23 @@ void setup()
 
 void loop()
 {
+  
+  int CurrentMilis = millis();
 
-  float T1 = 0;
   T1 = analogRead(ValSortieMoteur1);
-  float T2 = 0;
+
   T2 = analogRead(ValSortieMoteur2);
-  float C = 0;
+
   C = analogRead(ValCourant);
 
-  float Courant = 0;
-  Courant = (C*3)/1023;
-  float Tension1 = 0;
-  Tension1 = (T1*3)/1023;
-  float Tension2 = 0;
-  Tension2 = (T2*3)/1023;
+  Courant = (C * 3.1) / 1023;
+  NbCourant += 1;
+  CourantVal = CourantVal + Courant;
+  CourantMoyen = CourantVal / NbCourant;
 
-  int PWM = 0;
+  Tension1 = ((T1 * Gain) / 1023);
+
+  Tension2 = ((T2 * Gain) / 1023);
 
   int lecture = analogRead(AjustVitesse);
   int vitesse = lecture;
@@ -46,6 +62,7 @@ void loop()
     PWM = map(lecture, 423, 0, 0, 255);
     analogWrite(PWMInverse1, 0);
     analogWrite(PWMInverse2, PWM);
+    PWM = -PWM;
   }
   else
   {
@@ -55,18 +72,27 @@ void loop()
     analogWrite(PWMInverse2, 0);
   }
 
-  Serial.print("Potentimètre demander : ");
-  Serial.print(PWM);
-  Serial.print("\tTension 1 : ");
-  Serial.print(Tension1);
-  Serial.print(" / ");
-  Serial.print(T1);
-  Serial.print("\tTension 2 : ");
-  Serial.print(Tension2);
-  Serial.print(" / ");
-  Serial.print(T2);
-  Serial.print("\tCourant : ");
-  Serial.print(Courant);
-  Serial.print(" / ");
-  Serial.println(C);
+  if (CurrentMilis - LastSendTime > SendTime)
+  {
+    Serial.print("Potentimètre demander : ");
+    Serial.print(PWM);
+    Serial.print("\tTension 1 : ");
+    Serial.print(Tension1);
+    Serial.print(" / ");
+    Serial.print(T1);
+    Serial.print("\tTension 2 : ");
+    Serial.print(Tension2);
+    Serial.print(" / ");
+    Serial.print(T2);
+    Serial.print("\tCourant : ");
+    Serial.print(CourantMoyen);
+    Serial.print(" / ");
+    Serial.println(C);
+    LastSendTime = CurrentMilis;
+  }
+  if (NbCourant > 1000)
+  {
+   NbCourant = 1;
+   CourantVal = CourantMoyen;
+  }
 }
