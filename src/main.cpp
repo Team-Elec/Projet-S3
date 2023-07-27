@@ -22,8 +22,8 @@ bool BluetoothVal = false;
 // Ajustement PID
 float CoeAjustPSepic = 1;
 float CoeAjustISepic = 2.2;
-float CoeAjustPBatterie = 6;
-float CoeAjustIBatterie = 4;
+float CoeAjustPBatterie = 0.7;
+float CoeAjustIBatterie = 1;
 
 // Valeur des ajustement du potentiomètre
 float MaximumAjust = 14;
@@ -43,7 +43,7 @@ float RendementSepic = 0.75;
 float TensionDiode = 0.3;
 
 // Valeur de MaxPWM
-int MaxPWM = 255;
+int MaxPWM = 200;
 
 // Initiation de valeurs à 0
 // Pas vraiment important tant que ça
@@ -61,6 +61,9 @@ int thermo1, thermo2, thermo3, thermo4, thermo5 = 0;
 float LastValTempsLum, LastValTempsBatt, LastValTempsBattOn = 0;
 float ErreurLum, ErreurBatt, ErreurBattOn, ErreurOFF = 0;
 int16_t SORTIE_SEPIC, VALEUR_BATTERIE, COURANT, ENTREE = 0;
+int NbMoyenne = 1;
+float DirVoltageDemanderBattVide, DirVoltageSepic, DirVoltageEntree = 0;
+float ValVoltageDemanderBattVide, ValVoltageSepic, ValVoltageEntree = 0;
 
 // Debounce
 unsigned lastsendtime, lastLumiere, lastBatterie = 0;
@@ -128,10 +131,28 @@ void loop()
 
   // Transfert vers les vrai valeurs
   VoltageDemanderLum = ((analogRead(Ajust) * (MaximumAjust - MinimumAjust)) / 1023) + MinimumAjust;
-  VoltageDemanderBattVide = (VALEUR_BATTERIE)*diviseur;
-  VoltageSepic = ((SORTIE_SEPIC * 6.144) / 32768) * diviseur;
   CourantBatterie = ((COURANT * 6.144) / 32768);
-  VoltageEntree = ((ENTREE * 6.144) / 32768) * diviseur;
+  DirVoltageDemanderBattVide = ((VALEUR_BATTERIE)*diviseur) - 1;
+  DirVoltageSepic = (((SORTIE_SEPIC * 6.144) / 32768) * diviseur) - 1;
+  DirVoltageEntree = (((ENTREE * 6.144) / 32768) * diviseur) - 1;
+
+  ValVoltageDemanderBattVide = DirVoltageDemanderBattVide + ValVoltageDemanderBattVide;
+  ValVoltageSepic = DirVoltageSepic + ValVoltageSepic;
+  ValVoltageEntree = DirVoltageEntree + ValVoltageEntree;
+
+  VoltageDemanderBattVide = ValVoltageDemanderBattVide / NbMoyenne;
+  VoltageSepic = ValVoltageSepic / NbMoyenne;
+  VoltageEntree = ValVoltageEntree / NbMoyenne;
+
+  NbMoyenne += 1;
+
+  if (NbMoyenne > 500)
+  {
+    NbMoyenne = 1;
+    ValVoltageDemanderBattVide = VoltageDemanderBattVide;
+    ValVoltageSepic = VoltageSepic;
+    ValVoltageEntree = VoltageEntree;
+  }
 
   // Lecture pour le mode du SEPIC (Potentiomètre)
   ModeSepic = analogRead(Mode);
@@ -146,20 +167,20 @@ void loop()
   if (ProtectMode)
   {
     // Mode batterie
-    if (ModeSepic < 200)
+    if (ModeSepic < 50)
     {
       ModeBatterie = true;
       ModeLumiere = false;
     }
     // Mode off
-    if (ModeSepic > 250 && ModeSepic < 800)
+    if (ModeSepic > 50 && ModeSepic < 950)
     {
       ModeBatterie = false;
       ModeLumiere = false;
       BatterieFini = false;
     }
     // Mode Lumière
-    if (ModeSepic > 850)
+    if (ModeSepic > 950)
     {
       ModeBatterie = false;
       ModeLumiere = true;
@@ -246,10 +267,16 @@ void loop()
     digitalWrite(Batterie, LOW);
     digitalWrite(Lumiere, HIGH);
   }
+  if (!ModeBatterie && !ModeLumiere)
+  {
+    digitalWrite(Batterie, LOW);
+    digitalWrite(Lumiere, LOW);
+  }
 
   // Code pour la Batterie Activation
   if (ModeBatterie)
   {
+    digitalWrite(Lumiere, LOW);
     if (!BatterieFini)
     {
       if (BatterieDebut == true)
@@ -350,6 +377,10 @@ void loop()
       Serial1.print("\n");
     }
     lastsendtime = CurrentMillis;
+  }
+  if (VoltageSepic > 40)
+  {
+    ProtectMode = false;
   }
 
   if (SORTIE_SEPIC < 0)
