@@ -10,7 +10,7 @@ void appelVariables()
     pinMode(AjustVitesse, INPUT);
 
     pinMode(Therm1, INPUT);
-    pinMode(Therm3, INPUT);
+    pinMode(Therm2, INPUT);
 
     pinMode(ValSortieMoteur1, INPUT);
     pinMode(ValSortieMoteur2, INPUT);

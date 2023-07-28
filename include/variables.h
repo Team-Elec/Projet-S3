@@ -10,7 +10,7 @@
 
 // PIN DE THERMO
 #define Therm1 A2
-#define Therm3 A4
+#define Therm2 A4
 
 //Valeur de sortie du moteur dépendament des modes
 #define ValSortieMoteur1 A0
