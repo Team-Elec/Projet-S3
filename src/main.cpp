@@ -9,13 +9,18 @@ ADS1115 ADS(0x48);
 // Valeurs importante a changer si jamais
 // Vitesse envoie et vitesse de sécurite anti flicker
 // En milisecondes
-#define SendTime 100
+#define SendTime 1000
 
 // Lieu des sortie Serial
+//pour les debug
 bool Bluetooth = false;
 bool SerialOrdi = false;
+
+//Pour le mode
 bool SerialOrdiVal = true;
-bool BluetoothVal = false;
+bool BluetoothVal = true;
+
+//Ce qu'on veut sortie
 bool ThermistanceValeurs = false;
 bool Valeurs = true;
 
@@ -31,6 +36,7 @@ float MinimumAjust = 10;
 
 // Courant dans la batterie (en Volt)
 float CourantDansLaBatterie = 2.5;
+float MaxBatterieCourant = 0.9;
 
 // Tension Max batterie
 float MaxBatterie = 14.7;
@@ -43,7 +49,7 @@ float RendementSepic = 0.75;
 float TensionDiode = 0.3;
 
 // Valeur de MaxPWM
-int MaxPWM = 150;
+int MaxPWM = 175;
 
 // Initiation de valeurs à 0
 // Pas vraiment important tant que ça
@@ -133,7 +139,7 @@ void loop()
   VoltageDemanderLum = ((analogRead(Ajust) * (MaximumAjust - MinimumAjust)) / 1023) + MinimumAjust;
   CourantBatterie = (((COURANT * 6.144) / 32768));
   VoltageDemanderBattVide = (((VALEUR_BATTERIE * 6.144) / 32768) * diviseur);
-  VoltageDemanderBattVide = 0;
+  //VoltageDemanderBattVide = 0;
   VoltageSepic = (((SORTIE_SEPIC * 6.144) / 32768) * diviseur);
   VoltageEntree = (((ENTREE * 6.144) / 32768) * diviseur);
 
@@ -145,7 +151,7 @@ void loop()
   // Protection pour pas qu'il partent dans le mauvais mode
   // Doit avoir ProtectMode de true pour être capable d'entrer
   // Mode : <50 = batterie, <950 = lumière, <950 et >50 Mode off
-  if (ModeSepic > 500 && ModeSepic < 700)
+  if (ModeSepic > 100 && ModeSepic < 850)
   {
     digitalWrite(Lumiere, LOW);
     digitalWrite(Batterie, LOW);
@@ -211,6 +217,10 @@ void loop()
     PWMSEPIC += ValeurAjustementSepicLum;
     PWMSEPICINT = PWMSEPIC;
 
+    if (VoltageSepic > 40)
+    {
+      PWMSEPICINT = PWMSEPICINT - 30;
+    }
     if (PWMSEPICINT < 0)
     {
       PWMSEPICINT = 0;
@@ -227,7 +237,10 @@ void loop()
   // Code pour la Batterie Activation
   if (ModeBatterie)
   {
-
+    if (CourantBatterieAmpere >= MaxBatterieCourant)
+    {
+      ProtectMode = false;
+    }
     if (BatterieFini == false)
     {
       if (BatterieDebut == true)
@@ -244,7 +257,7 @@ void loop()
 
         ValeurAjustementSepicBattOn = (ErreurBattOn * CoeAjustPBatterie) + ((IPIDBattOn)*CoeAjustIBatterie);
 
-        VoltageDemanderBatt = VoltageDemanderBattVide + ValeurAjustementSepicBattOn;
+        VoltageDemanderBatt = VoltageDemanderBattVide + ValeurAjustementSepicBattOn + 0.3;
 
         if (VoltageDemanderBattVide > MaxBatterie)
         {
@@ -285,6 +298,10 @@ void loop()
     PWMSEPIC += ValeurAjustementSepicBatt;
     PWMSEPICINT = PWMSEPIC;
 
+    if (VoltageSepic > 40)
+    {
+      PWMSEPICINT = PWMSEPICINT - 30;
+    }
     if (PWMSEPICINT < 0)
     {
       PWMSEPICINT = 0;
@@ -293,6 +310,7 @@ void loop()
     {
       PWMSEPICINT = MaxPWM;
     }
+
     analogWrite(SEPIC, PWMSEPICINT);
   }
 
@@ -371,55 +389,37 @@ void loop()
     {
       if (Valeurs)
       {
-        Serial1.print("Mode : ");
         if (ModeLumiere)
         {
-          Serial1.print("Lumière");
+          Serial1.println("Lumière ");
         }
         if (ModeBatterie)
         {
-          Serial1.print("Batterie");
+          Serial1.println("Batterie ");
         }
         if (ModeOff)
         {
-          Serial1.print("Fuckall");
+          Serial1.println("Fuckall ");
         }
-        Serial1.print("\tValeur entrée : ");
-        Serial1.print(VoltageEntree);
+        Serial1.print("Tension Sepic : ");
+        Serial1.println(VoltageSepic);
 
-        Serial1.print("\tTension demander Lumière : ");
-        Serial1.print(VoltageDemanderLum);
-
-        Serial1.print("\tTension Sepic : ");
-        Serial1.print(VoltageSepic);
-
-        Serial1.print("\tPWM SEPIC : ");
-        Serial1.print(PWMSEPICINT);
-
-        Serial1.print("\tTension demander Batterie : ");
-        Serial1.print(VoltageDemanderBatt);
-
-        Serial1.print("\tCourrant Batterie : ");
-        Serial1.print(CourantBatterieAmpere);
-
-        Serial1.print("\tTension Batterie : ");
-        Serial1.print(VoltageDemanderBattVide);
+        Serial1.print("PWM SEPIC : ");
+        Serial1.println(PWMSEPICINT);
       }
       if (ThermistanceValeurs)
       {
         Serial1.print("5V : ");
-        Serial1.print(Thermistance1);
-        Serial1.print("\t\tSEPIC : ");
-        Serial1.print(Thermistance2);
-        Serial1.print("\t\tZener : ");
-        Serial1.print(Thermistance3);
-        Serial1.print("\t\tBatterie :");
-        Serial1.print(Thermistance4);
-        Serial1.print("\t\tProtect ");
-        Serial1.print(Thermistance5);
+        Serial1.println(Thermistance1);
+        Serial1.print("SEPIC : ");
+        Serial1.println(Thermistance2);
+        Serial1.print("Zener : ");
+        Serial1.println(Thermistance3);
+        Serial1.print("Batterie :");
+        Serial1.println(Thermistance4);
+        Serial1.print("Protect ");
+        Serial1.println(Thermistance5);
       }
-
-      Serial1.print("\n");
     }
     lastsendtime = CurrentMillis;
   }
