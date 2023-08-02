@@ -12,15 +12,15 @@ ADS1115 ADS(0x48);
 #define SendTime 200
 
 // Lieu des sortie Serial
-//pour les debug
+// pour les debug
 bool Bluetooth = false;
 bool SerialOrdi = false;
 
-//Pour le mode
+// Pour le mode
 bool SerialOrdiVal = true;
 bool BluetoothVal = false;
 
-//Ce qu'on veut sortie
+// Ce qu'on veut sortie
 bool ThermistanceValeurs = false;
 bool Valeurs = true;
 
@@ -69,7 +69,7 @@ int16_t SORTIE_SEPIC, VALEUR_BATTERIE, COURANT, ENTREE = 0;
 float ValThermistance1, ValThermistance2, ValThermistance3, ValThermistance4, ValThermistance5 = 0.0;
 float Thermistance1, Thermistance2, Thermistance3, Thermistance4, Thermistance5 = 0.0;
 float CourantBatterieAmpere = 0;
-int NbBatterie = 0;
+int NbBatterie, NbCourant = 0;
 
 // Debounce
 unsigned lastsendtime, lastLumiere, lastBatterie = 0;
@@ -137,7 +137,7 @@ void loop()
   }
 
   // Transfert vers les vrai valeurs
-  VoltageDemanderLum = (((1023 - analogRead(Ajust)) * (MaximumAjust-MinimumAjust)) / 1023) + MinimumAjust;
+  VoltageDemanderLum = (((1023 - analogRead(Ajust)) * (MaximumAjust - MinimumAjust)) / 1023) + MinimumAjust;
   CourantBatterie = (((COURANT * 6.144) / 32768));
   VoltageDemanderBattVide = (((VALEUR_BATTERIE * 6.144) / 32768) * diviseur);
   VoltageSepic = (((SORTIE_SEPIC * 6.144) / 32768) * diviseur);
@@ -177,7 +177,7 @@ void loop()
       ModeBatterie = false;
       ModeLumiere = false;
       ModeOff = true;
-      BatterieDebut = false;
+      BatterieDebut = true;
       digitalWrite(Lumiere, LOW);
       digitalWrite(Batterie, LOW);
     }
@@ -195,7 +195,9 @@ void loop()
   {
     ModeBatterie = false;
     ModeLumiere = false;
+    BatterieFini = false;
     NbBatterie = 0;
+    NbCourant = 0;
     LastValTempsBatt = CurrentMicros;
     LastValTempsBattOn = CurrentMicros;
     LastValTempsLum = CurrentMicros;
@@ -264,8 +266,18 @@ void loop()
         {
           NbBatterie += 1;
         }
-        else{
+        else
+        {
           NbBatterie = 0;
+        }
+
+        if (CourantBatterie < 0.10)
+        {
+          NbCourant += 1;
+        }
+        else
+        {
+          NbCourant = 0;
         }
 
         if (NbBatterie > 10000)
@@ -273,10 +285,15 @@ void loop()
           BatterieDebut = false;
           BatterieFin = true;
         }
+        if (NbCourant > 20)
+        {
+          ProtectMode = false;
+          BatterieFini = true;
+        }
       }
       if (BatterieFin == true)
       {
-      
+
         // Petit code pour debogguer YOUPIIII
         printage(Bluetooth, SerialOrdi, 11);
         VoltageDemanderBatt = MaxBatterie;
@@ -319,6 +336,14 @@ void loop()
     if (PWMSEPICINT > MaxPWM)
     {
       PWMSEPICINT = MaxPWM;
+    }
+    if (NbCourant > 20)
+    {
+      ProtectMode = false;
+      BatterieFini = true;
+      PWMSEPICINT = 0;
+      VoltageDemanderBatt = 0;
+      IPIDBattOn = 0;
     }
 
     analogWrite(SEPIC, PWMSEPICINT);
