@@ -9,7 +9,7 @@ ADS1115 ADS(0x48);
 // Valeurs importante a changer si jamais
 // Vitesse envoie et vitesse de sécurite anti flicker
 // En milisecondes
-#define SendTime 1000
+#define SendTime 200
 
 // Lieu des sortie Serial
 //pour les debug
@@ -18,7 +18,7 @@ bool SerialOrdi = false;
 
 //Pour le mode
 bool SerialOrdiVal = true;
-bool BluetoothVal = true;
+bool BluetoothVal = false;
 
 //Ce qu'on veut sortie
 bool ThermistanceValeurs = false;
@@ -31,7 +31,7 @@ float CoeAjustPBatterie = 0.5;
 float CoeAjustIBatterie = 1.1;
 
 // Valeur des ajustement du potentiomètre
-float MaximumAjust = 14;
+float MaximumAjust = 30;
 float MinimumAjust = 10;
 
 // Courant dans la batterie (en Volt)
@@ -49,7 +49,7 @@ float RendementSepic = 0.75;
 float TensionDiode = 0.3;
 
 // Valeur de MaxPWM
-int MaxPWM = 175;
+int MaxPWM = 190;
 
 // Initiation de valeurs à 0
 // Pas vraiment important tant que ça
@@ -136,10 +136,9 @@ void loop()
   }
 
   // Transfert vers les vrai valeurs
-  VoltageDemanderLum = ((analogRead(Ajust) * (MaximumAjust - MinimumAjust)) / 1023) + MinimumAjust;
+  VoltageDemanderLum = (((1023 - analogRead(Ajust)) * (MaximumAjust-MinimumAjust)) / 1023) + MinimumAjust;
   CourantBatterie = (((COURANT * 6.144) / 32768));
   VoltageDemanderBattVide = (((VALEUR_BATTERIE * 6.144) / 32768) * diviseur);
-  //VoltageDemanderBattVide = 0;
   VoltageSepic = (((SORTIE_SEPIC * 6.144) / 32768) * diviseur);
   VoltageEntree = (((ENTREE * 6.144) / 32768) * diviseur);
 
