@@ -31,7 +31,7 @@ float CoeAjustPBatterie = 0.5;
 float CoeAjustIBatterie = 1.1;
 
 // Valeur des ajustement du potentiomètre
-float MaximumAjust = 30;
+float MaximumAjust = 14;
 float MinimumAjust = 10;
 
 // Courant dans la batterie (en Volt)
@@ -69,6 +69,7 @@ int16_t SORTIE_SEPIC, VALEUR_BATTERIE, COURANT, ENTREE = 0;
 float ValThermistance1, ValThermistance2, ValThermistance3, ValThermistance4, ValThermistance5 = 0.0;
 float Thermistance1, Thermistance2, Thermistance3, Thermistance4, Thermistance5 = 0.0;
 float CourantBatterieAmpere = 0;
+int NbBatterie = 0;
 
 // Debounce
 unsigned lastsendtime, lastLumiere, lastBatterie = 0;
@@ -194,6 +195,7 @@ void loop()
   {
     ModeBatterie = false;
     ModeLumiere = false;
+    NbBatterie = 0;
     LastValTempsBatt = CurrentMicros;
     LastValTempsBattOn = CurrentMicros;
     LastValTempsLum = CurrentMicros;
@@ -256,9 +258,17 @@ void loop()
 
         ValeurAjustementSepicBattOn = (ErreurBattOn * CoeAjustPBatterie) + ((IPIDBattOn)*CoeAjustIBatterie);
 
-        VoltageDemanderBatt = VoltageDemanderBattVide + ValeurAjustementSepicBattOn + 0.3;
+        VoltageDemanderBatt = VoltageDemanderBattVide + ValeurAjustementSepicBattOn;
 
         if (VoltageDemanderBattVide > MaxBatterie)
+        {
+          NbBatterie += 1;
+        }
+        else{
+          NbBatterie = 0;
+        }
+
+        if (NbBatterie > 10000)
         {
           BatterieDebut = false;
           BatterieFin = true;
@@ -266,6 +276,7 @@ void loop()
       }
       if (BatterieFin == true)
       {
+      
         // Petit code pour debogguer YOUPIIII
         printage(Bluetooth, SerialOrdi, 11);
         VoltageDemanderBatt = MaxBatterie;
