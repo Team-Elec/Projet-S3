@@ -69,7 +69,7 @@ int16_t SORTIE_SEPIC, VALEUR_BATTERIE, COURANT, ENTREE = 0;
 float ValThermistance1, ValThermistance2, ValThermistance3, ValThermistance4, ValThermistance5 = 0.0;
 float Thermistance1, Thermistance2, Thermistance3, Thermistance4, Thermistance5 = 0.0;
 float CourantBatterieAmpere = 0;
-int NbBatterie, NbCourant = 0;
+int NbBatterie, NbCourant, NbCourantMax = 0;
 
 // Debounce
 unsigned lastsendtime, lastLumiere, lastBatterie = 0;
@@ -242,6 +242,14 @@ void loop()
   {
     if (CourantBatterieAmpere >= MaxBatterieCourant)
     {
+      NbCourantMax += 1;
+    }
+    else
+    {
+      NbCourantMax = 0;
+    }
+    if (NbCourantMax > 20)
+    {
       ProtectMode = false;
     }
     if (BatterieFini == false)
@@ -287,7 +295,6 @@ void loop()
         }
         if (NbCourant > 20)
         {
-          ProtectMode = false;
           BatterieFini = true;
         }
       }
@@ -339,10 +346,12 @@ void loop()
     }
     if (NbCourant > 20)
     {
-      ProtectMode = false;
       BatterieFini = true;
       PWMSEPICINT = 0;
       VoltageDemanderBatt = 0;
+      LastValTempsBatt = CurrentMicros;
+      LastValTempsBattOn = CurrentMicros;
+      IPIDBatt = 0;
       IPIDBattOn = 0;
     }
 
